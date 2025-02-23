@@ -2,6 +2,7 @@
 node_modules/
 package-lock.json
 yarn.lock
+pnpm-lock.yaml
 
 # Ignore environment variables
 .env
@@ -29,9 +30,3 @@ dist/
 build/
 coverage/
 out/
-
-# Ignore Docker files (if using Docker)
-docker-compose.override.yml
-
-# Ignore global dependencies (if using `pnpm`)
-.pnpm-store/
