@@ -1,0 +1,30 @@
+# Node modules and package lock
+node_modules
+package-lock.json
+
+# Build artifacts
+dist
+build
+.vite
+.vitepress
+
+# Environment variables
+.env
+.env.example
+
+# Logs
+logs
+*.log
+
+# Editor and OS files
+.vscode
+.idea
+.DS_Store
+*.swp
+*.swo
+Thumbs.db
+
+# Configuration and cache files
+.cache
+.next
+out
