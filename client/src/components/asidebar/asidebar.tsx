@@ -34,10 +34,8 @@ import { useAuthContext } from "@/context/auth-provider";
 
 const Asidebar = () => {
   const { isLoading, user } = useAuthContext();
-
   const { open } = useSidebar();
   const workspaceId = useWorkspaceId();
-
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -45,10 +43,12 @@ const Asidebar = () => {
       <Sidebar collapsible="icon">
         <SidebarHeader className="!py-0 dark:bg-background">
           <div className="flex h-[50px] items-center justify-start w-full px-1">
-            <Logo url={`/workspace/${workspaceId}`} />
+            {/* Modification du lien du logo */}
+            <Logo url={user ? `/workspace/${workspaceId}` : "/"} />
+
             {open && (
               <Link
-                to={`/workspace/${workspaceId}`}
+                to={user ? `/workspace/${workspaceId}` : "/"}
                 className="hidden md:flex ml-2 items-center gap-2 self-center font-medium"
               >
                 Team Sync.
@@ -56,17 +56,22 @@ const Asidebar = () => {
             )}
           </div>
         </SidebarHeader>
-        <SidebarContent className=" !mt-0 dark:bg-background">
-          <SidebarGroup className="!py-0">
-            <SidebarGroupContent>
-              <WorkspaceSwitcher />
-              <Separator />
-              <NavMain />
-              <Separator />
-              <NavProjects />
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
+
+        {/* Masquer le contenu si non connecté */}
+        {user && (
+          <SidebarContent className="!mt-0 dark:bg-background">
+            <SidebarGroup className="!py-0">
+              <SidebarGroupContent>
+                <WorkspaceSwitcher />
+                <Separator />
+                <NavMain />
+                <Separator />
+                <NavProjects />
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+        )}
+
         <SidebarFooter className="dark:bg-background">
           <SidebarMenu>
             <SidebarMenuItem>
@@ -75,7 +80,8 @@ const Asidebar = () => {
                   size="24px"
                   className="place-self-center self-center animate-spin"
                 />
-              ) : (
+              ) : user ? (
+                // Contenu utilisateur connecté
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <SidebarMenuButton
@@ -85,15 +91,17 @@ const Asidebar = () => {
                       <Avatar className="h-8 w-8 rounded-full">
                         <AvatarImage src={user?.profilePicture || ""} />
                         <AvatarFallback className="rounded-full border border-gray-500">
-                          {user?.name?.split(" ")?.[0]?.charAt(0)}
-                          {user?.name?.split(" ")?.[1]?.charAt(0)}
+                          {user?.name?.split(/\s+/)[0]?.[0]}
+                          {user?.name?.split(/\s+/)[1]?.[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div className="grid flex-1 text-left text-sm leading-tight">
                         <span className="truncate font-semibold">
-                          {user?.name}
+                          {user?.name || "Utilisateur"}
                         </span>
-                        <span className="truncate text-xs">{user?.email}</span>
+                        <span className="truncate text-xs">
+                          {user?.email || "Non connecté"}
+                        </span>
                       </div>
                       <EllipsisIcon className="ml-auto size-4" />
                     </SidebarMenuButton>
@@ -108,10 +116,18 @@ const Asidebar = () => {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setIsOpen(true)}>
                       <LogOut />
-                      Log out
+                      Déconnexion
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              ) : (
+                // Lien de connexion si non connecté
+                <Link
+                  to="/login"
+                  className="flex items-center gap-2 p-2 text-sm hover:bg-accent w-full"
+                >
+                  <span className="ml-2">Se connecter</span>
+                </Link>
               )}
             </SidebarMenuItem>
           </SidebarMenu>

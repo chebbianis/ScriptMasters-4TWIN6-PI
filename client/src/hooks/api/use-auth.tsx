@@ -1,30 +1,15 @@
-import { getCurrentUserQueryFn } from "@/lib/api";
-import { useQuery } from "@tanstack/react-query";
+import { useAuthContext } from "@/context/auth-provider";
 
+// Nouvelle implémentation utilisant le contexte plutôt que l'API
 const useAuth = () => {
-  // Utilisateur de test simulé
-  const mockUser = {
-    user: {
-      _id: "test-user-id",
-      email: "test@example.com",
-      name: "Utilisateur Test",
-      currentWorkspace: {
-        _id: "test-workspace-id",
-        name: "Workspace Test",
-        role: "ADMIN",
-        members: [],
-        projects: [],
-      },
-      permissions: ["CREATE_TASK", "DELETE_TASK", "UPDATE_TASK", "VIEW_TASK"]
-    }
-  };
+  const { user, isLoading, error } = useAuthContext();
 
   return {
-    data: mockUser,
-    error: null,
-    isLoading: false,
+    data: user ? { user } : undefined,
+    error,
+    isLoading,
     isFetching: false,
-    refetch: () => { },
+    refetch: () => { }
   };
 };
 

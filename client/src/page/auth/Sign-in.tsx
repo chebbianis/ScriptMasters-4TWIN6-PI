@@ -3,6 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { useAuthContext } from '@/context/auth-provider';
 import {
   Card,
   CardContent,
@@ -27,17 +28,38 @@ import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
 
 const SignIn = () => {
+  const { login } = useAuthContext();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const returnUrl = searchParams.get("returnUrl");
 
   const { mutate, isPending } = useMutation({
     mutationFn: loginMutationFn,
+    onError: (error: any) => {
+      const errorMessage = error.response?.status === 401
+        ? "Invalid account or credentials"
+        : error.message;
+
+      toast({
+        title: "Login Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+
+      form.setError("email", {
+        type: "manual",
+        message: "Invalid account or credentials"
+      });
+      form.setError("password", {
+        type: "manual",
+        message: " " // Empty space to maintain form layout
+      });
+    }
   });
 
   const formSchema = z.object({
     email: z.string().trim().email("Invalid email address").min(1, {
-      message: "Workspace name is required",
+      message: "Email is required",
     }),
     password: z.string().trim().min(1, {
       message: "Password is required",
@@ -57,18 +79,23 @@ const SignIn = () => {
 
     mutate(values, {
       onSuccess: (data) => {
-        const user = data.user;
-        console.log(user);
-        const decodedUrl = returnUrl ? decodeURIComponent(returnUrl) : null;
-        navigate(decodedUrl || `/workspace/${user.currentWorkspace}`);
-      },
-      onError: (error) => {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
+        login({
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          role: data.role,
+          WorkspaceId: data.WorkspaceId,
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken
         });
-      },
+
+        const decodedUrl = returnUrl ? decodeURIComponent(returnUrl) : null;
+        const redirectPath = data.WorkspaceId
+          ? `/workspace/${data.WorkspaceId}`
+          : '/create-workspace';
+
+        navigate(decodedUrl || redirectPath);
+      }
     });
   };
 
@@ -119,8 +146,9 @@ const SignIn = () => {
                                   {...field}
                                 />
                               </FormControl>
-
-                              <FormMessage />
+                              <FormMessage>
+                                {form.formState.errors.email?.message}
+                              </FormMessage>
                             </FormItem>
                           )}
                         />
@@ -149,7 +177,6 @@ const SignIn = () => {
                                   {...field}
                                 />
                               </FormControl>
-
                               <FormMessage />
                             </FormItem>
                           )}
@@ -160,7 +187,7 @@ const SignIn = () => {
                         type="submit"
                         className="w-full"
                       >
-                        {isPending && <Loader className="animate-spin" />}
+                        {isPending && <Loader className="animate-spin mr-2" />}
                         Login
                       </Button>
                     </div>
@@ -178,7 +205,7 @@ const SignIn = () => {
               </Form>
             </CardContent>
           </Card>
-          <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 [&_a]:hover:text-primary  ">
+          <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 [&_a]:hover:text-primary">
             By clicking continue, you agree to our{" "}
             <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
           </div>

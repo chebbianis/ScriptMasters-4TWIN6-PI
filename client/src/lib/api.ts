@@ -28,20 +28,25 @@ import {
 export const loginMutationFn = async (
   data: loginType
 ): Promise<LoginResponseType> => {
-  const response = await API.post("/auth/login", data);
+  const response = await API.post("login", data);
   return response.data;
 };
 
 export const registerMutationFn = async (data: registerType) =>
-  await API.post("/auth/register", data);
+  await API.post("/register", data);
 
-export const logoutMutationFn = async () => await API.post("/auth/logout");
+export const logoutMutationFn = async (email: string) => {
+  if (!email) {
+    throw new Error("Email manquant");
+  }
+  return await API.post("/logout", { email });
+};
 
-export const getCurrentUserQueryFn =
-  async (): Promise<CurrentUserResponseType> => {
-    const response = await API.get(`/user/current`);
-    return response.data;
-  };
+// export const getCurrentUserQueryFn =
+//   async (): Promise<CurrentUserResponseType> => {
+//     const response = await API.get(`/user/current`);
+//     return response.data;
+//   };
 
 //********* WORKSPACE ****************
 //************* */

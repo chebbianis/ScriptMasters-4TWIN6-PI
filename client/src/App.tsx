@@ -3,7 +3,7 @@ import { TestConnection } from './components/TestConnection';
 
 function App() {
   return (
-    <div>
+    <div className="app">
       <AppRoutes />
       <TestConnection />
     </div>

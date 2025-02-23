@@ -1,24 +1,37 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createContext, useContext, useEffect } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import useAuth from "@/hooks/api/use-auth";
 import { UserType, WorkspaceType } from "@/types/api.type";
 import useGetWorkspaceQuery from "@/hooks/api/use-get-workspace";
 import { useNavigate } from "react-router-dom";
 import usePermissions from "@/hooks/use-permissions";
 import { PermissionType } from "@/constant";
+import { useQueryClient } from "@tanstack/react-query";
+import { logoutMutationFn } from "@/lib/api";
 
-// Define the context shape
+
+
+type AuthResponseType = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  WorkspaceId: string | null;
+  accessToken: string;
+  refreshToken: string;
+};
+
 type AuthContextType = {
-  user?: UserType;
+  user: AuthResponseType | null;
   workspace?: WorkspaceType;
   hasPermission: (permission: PermissionType) => boolean;
   error: any;
   isLoading: boolean;
   isFetching: boolean;
   workspaceLoading: boolean;
-  refetchAuth: () => void;
   refetchWorkspace: () => void;
+  login: (userData: AuthResponseType) => void;
+  logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,17 +39,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const workspaceId = useWorkspaceId();
 
-  const {
-    data: authData,
-    error: authError,
-    isLoading,
-    isFetching,
-    refetch: refetchAuth,
-  } = useAuth();
-  const user = authData?.user;
+  const [user, setUser] = useState<AuthResponseType | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const {
     data: workspaceData,
@@ -48,12 +56,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const workspace = workspaceData?.workspace;
 
   useEffect(() => {
-    if (workspaceError) {
-      if (workspaceError?.errorCode === "ACCESS_UNAUTHORIZED") {
-        navigate("/"); // Redirect if the user is not a member of the workspace
+    const checkAuth = () => {
+      const token = localStorage.getItem("accessToken");
+      const storedUser = localStorage.getItem("user");
+
+      if (token && storedUser) {
+        try {
+          const userData = JSON.parse(storedUser) as AuthResponseType;
+          setUser(userData);
+        } catch (error) {
+          console.error("Error parsing user data:", error);
+          logout();
+        }
       }
+      setIsLoading(false);
+    };
+
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    if (workspaceError?.errorCode === "ACCESS_UNAUTHORIZED") {
+      logout();
     }
-  }, [navigate, workspaceError]);
+  }, [workspaceError]);
+
+  const login = (userData: AuthResponseType) => {
+    localStorage.setItem("accessToken", userData.accessToken);
+    localStorage.setItem("refreshToken", userData.refreshToken);
+    localStorage.setItem("user", JSON.stringify(userData));
+    setUser(userData);
+    setIsLoading(false);
+
+
+  };
+
+  const logout = async () => {
+    try {
+      const storedUser = localStorage.getItem("user");
+
+      if (!storedUser) {
+        throw new Error("Aucun utilisateur connecté");
+      }
+
+      const userData: AuthResponseType = JSON.parse(storedUser);
+      const email = userData.email;
+      console.log("email :" + email);
+
+
+      if (!email) {
+        throw new Error("Email utilisateur non trouvé");
+      }
+
+      await logoutMutationFn(email);
+
+    } catch (error) {
+      console.error("Erreur de déconnexion:", error);
+    } finally {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+      setUser(null);
+      queryClient.clear();
+      window.location.href = '/';
+    }
+  };
 
   const permissions = usePermissions(user, workspace);
 
@@ -67,12 +134,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         user,
         workspace,
         hasPermission,
-        error: authError || workspaceError,
+        error: workspaceError,
         isLoading,
-        isFetching,
+        isFetching: false,
         workspaceLoading,
-        refetchAuth,
         refetchWorkspace,
+        login,
+        logout,
       }}
     >
       {children}
@@ -80,11 +148,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useAuthContext = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useCurrentUserContext must be used within a AuthProvider");
+    throw new Error("useAuthContext must be used within an AuthProvider");
   }
   return context;
 };

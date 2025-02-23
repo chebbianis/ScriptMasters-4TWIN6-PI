@@ -1,6 +1,8 @@
 import express from 'express';
 import { createUser, loginUser } from '../controllers/user.controller.js';
 import { User } from '../models/user.model.js';
+import { refreshToken } from '../controllers/user.controller.js';
+
 
 const router = express.Router();
 
@@ -78,5 +80,8 @@ router.post('/login', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+router.post('/refresh-token', refreshToken);
+
 
 export default router;

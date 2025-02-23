@@ -4,12 +4,39 @@ import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import authRouter from './src/routes/authRoutes.js';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs'
+import { loginUser, createUser, logoutUser } from './src/controllers/user.controller.js';
 
+// Configuration des paths
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Chargement des variables d'environnement
+const envPath = path.join(__dirname, '.env');
+if (!fs.existsSync(envPath)) {
+    console.error('❌ Fichier .env introuvable !');
+    process.exit(1);
+}
+dotenv.config({ path: envPath });
+
+// Vérification des variables obligatoires
+const requiredEnvVars = ['ACCESS_TOKEN_SECRET', 'REFRESH_TOKEN_SECRET'];
+requiredEnvVars.forEach(varName => {
+    if (!process.env[varName]) {
+        console.error(`❌ Variable manquante dans .env : ${varName}`);
+        process.exit(1);
+    }
+});
 
 const app = express();
 const port = 3000;
 
 // Configuration de base
+
 app.use(express.json());
 app.use(express.static('public'));
 app.use(cors());
@@ -42,18 +69,43 @@ router.get("/test", (req, res) => {
     });
 });
 
+//http://localhost:3000/login
+// {
+//     "email": "anis@esprit.tn",
+//     "password":"anis"
+// }
+router.post('/login', loginUser);
+
+router.post('/logout', logoutUser);
+
+router.post('/register', createUser);
+
+
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.status(401).json({ error: 'Token non fourni' });
+
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            if (err.name === 'TokenExpiredError') {
+                return res.status(403).json({ error: 'Token expiré' });
+            }
+            return res.status(403).json({ error: 'Token invalide' });
+        }
+
+        req.user = {
+            id: decoded.id,
+            role: decoded.role,
+            email: decoded.email
+        };
+
+        next();
+    });
+}
 // POST /api/auth/register
-// POST /api/auth/login
-app.use('/api/auth', authRouter);
-
-
 app.use(router);
-
-
-
-
-
-
 
 // Démarrage du serveur
 httpServer.listen(port, () => {
@@ -69,3 +121,5 @@ process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception:', error);
     process.exit(1);
 });
+
+

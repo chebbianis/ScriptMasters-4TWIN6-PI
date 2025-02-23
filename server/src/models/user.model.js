@@ -33,6 +33,10 @@ const UserSchema = new Schema({
         type: Date,
         default: null
     },
+    refreshToken: {
+        type: String,
+        select: false
+    },
     WorkspaceId: {
         type: Schema.Types.ObjectId,
         ref: 'Workspace',
@@ -43,6 +47,7 @@ const UserSchema = new Schema({
         enum: ['ADMIN', 'PROJECT_MANAGER', 'TEAM_LEAD', 'DEVELOPER'],
         default: 'DEVELOPER'
     }
+
 }, {
     timestamps: true
 });

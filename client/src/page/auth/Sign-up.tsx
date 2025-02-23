@@ -32,12 +32,14 @@ const SignUp = () => {
   const { mutate, isPending } = useMutation({
     mutationFn: registerMutationFn,
   });
+
+  // Correction du message d'erreur pour l'email
   const formSchema = z.object({
     name: z.string().trim().min(1, {
       message: "Name is required",
     }),
     email: z.string().trim().email("Invalid email address").min(1, {
-      message: "Workspace name is required",
+      message: "Email is required", // Corrigé le message
     }),
     password: z.string().trim().min(1, {
       message: "Password is required",
@@ -55,14 +57,18 @@ const SignUp = () => {
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
+
     mutate(values, {
       onSuccess: () => {
-        navigate("/");
+        toast({
+          title: "Registration successful",
+          description: "You can now login with your credentials",
+        });
+        navigate("/"); // Redirection vers la page de connexion
       },
       onError: (error) => {
-        console.log(error);
         toast({
-          title: "Error",
+          title: "Registration failed",
           description: error.message,
           variant: "destructive",
         });
@@ -73,10 +79,7 @@ const SignUp = () => {
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
       <div className="flex w-full max-w-sm flex-col gap-6">
-        <Link
-          to="/"
-          className="flex items-center gap-2 self-center font-medium"
-        >
+        <Link to="/" className="flex items-center gap-2 self-center font-medium">
           <Logo />
           Team Sync.
         </Link>
@@ -112,12 +115,11 @@ const SignUp = () => {
                               </FormLabel>
                               <FormControl>
                                 <Input
-                                  placeholder="Joh Doe"
+                                  placeholder="John Doe"
                                   className="!h-[48px]"
                                   {...field}
                                 />
                               </FormControl>
-
                               <FormMessage />
                             </FormItem>
                           )}
@@ -139,7 +141,6 @@ const SignUp = () => {
                                   {...field}
                                 />
                               </FormControl>
-
                               <FormMessage />
                             </FormItem>
                           )}
@@ -161,7 +162,6 @@ const SignUp = () => {
                                   {...field}
                                 />
                               </FormControl>
-
                               <FormMessage />
                             </FormItem>
                           )}
@@ -187,7 +187,7 @@ const SignUp = () => {
               </Form>
             </CardContent>
           </Card>
-          <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 [&_a]:hover:text-primary  ">
+          <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 [&_a]:hover:text-primary">
             By clicking continue, you agree to our{" "}
             <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
           </div>

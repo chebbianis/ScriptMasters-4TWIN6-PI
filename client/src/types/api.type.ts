@@ -6,11 +6,13 @@ import {
 
 export type loginType = { email: string; password: string };
 export type LoginResponseType = {
-  message: string;
-  user: {
-    _id: string;
-    currentWorkspace: string;
-  };
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  WorkspaceId: string | null;
+  accessToken: string;
+  refreshToken: string;
 };
 
 export type registerType = {
@@ -38,8 +40,11 @@ export type UserType = {
 };
 
 export type CurrentUserResponseType = {
-  message: string;
-  user: UserType;
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  WorkspaceId: string | null;
 };
 
 //******** */ WORLSPACE TYPES ****************
