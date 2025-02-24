@@ -1,32 +1,24 @@
-# Ignore Node.js dependencies in both client and server
-node_modules/
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
-# Ignore environment variables
-.env
-.env.local
-.env.development
-.env.production
-.env.test
-
-# Ignore log files
-logs/
+# Logs
+logs
 *.log
 npm-debug.log*
 yarn-debug.log*
+yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Ignore OS and IDE-specific files
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
+node_modules
+dist
+dist-ssr
+*.local
 
-# Ignore build artifacts
-dist/
-build/
-coverage/
-out/
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
