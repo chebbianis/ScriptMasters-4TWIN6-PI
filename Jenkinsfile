@@ -1,5 +1,7 @@
 pipeline {
     agent any
+    environment {
+        PATH = "/opt/homebrew/bin:$PATH"
     stages {
         stage('Build Backend') {
             steps {
