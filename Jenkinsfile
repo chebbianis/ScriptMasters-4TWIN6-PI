@@ -31,7 +31,6 @@ pipeline {
         stage('Build Backend') {
             steps {
                 dir('server') {
-                    // Pas de build nécessaire ici
                     sh 'npm run build'
                 }
             }
