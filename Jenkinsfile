@@ -32,7 +32,7 @@ pipeline {
             steps {
                 dir('server') {
                     // Pas de build nécessaire ici
-                    echo 'Backend ready - no build step required'
+                    echo 'npm run build'
                 }
             }
         }
@@ -41,7 +41,7 @@ pipeline {
             script {
                 def scannerHome = tool 'sonarQube'
                 withSonarQubeEnv {
-                    sh "${scannerHome}/bin/sonar-scanner -Dsonar.branch.name=anis-jenkins"
+                    sh "${scannerHome}/bin/sonar-scanner "
                 }
         }
     }
