@@ -32,7 +32,7 @@ pipeline {
             steps {
                 dir('server') {
                     // Pas de build nécessaire ici
-                    echo 'npm run build'
+                    sh 'npm run build'
                 }
             }
         }
