@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createContext, useContext, useEffect, useState } from "react";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { UserType, WorkspaceType } from "@/types/api.type";
+import { WorkspaceType } from "@/types/api.type";
 import useGetWorkspaceQuery from "@/hooks/api/use-get-workspace";
-import { useNavigate } from "react-router-dom";
 import usePermissions from "@/hooks/use-permissions";
 import { PermissionType } from "@/constant";
 import { useQueryClient } from "@tanstack/react-query";
@@ -12,6 +11,8 @@ import { logoutMutationFn } from "@/lib/api";
 
 
 type AuthResponseType = {
+  profilePicture?: string;
+  currentWorkspace?: string;
   id: string;
   name: string;
   email: string;
@@ -40,7 +41,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const workspaceId = useWorkspaceId();
 
   const [user, setUser] = useState<AuthResponseType | null>(null);

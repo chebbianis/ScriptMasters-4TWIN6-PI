@@ -17,7 +17,6 @@ import {
 import {
   AllWorkspaceResponseType,
   CreateWorkspaceType,
-  CurrentUserResponseType,
   LoginResponseType,
   loginType,
   registerType,

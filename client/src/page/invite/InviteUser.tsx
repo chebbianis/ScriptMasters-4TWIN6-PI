@@ -22,10 +22,10 @@ const InviteUser = () => {
   const param = useParams();
   const inviteCode = param.inviteCode as string;
 
-  const { data: authData, isPending } = useAuth();
+  const { data: authData, isLoading: authLoading } = useAuth();
   const user = authData?.user;
 
-  const { mutate, isPending: isLoading } = useMutation({
+  const { mutate, isPending: isMutating } = useMutation({
     mutationFn: invitedUserJoinWorkspaceMutationFn,
   });
 
@@ -74,7 +74,7 @@ const InviteUser = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isPending ? (
+              {authLoading ? (
                 <Loader className="!w-11 !h-11 animate-spin place-self-center flex" />
               ) : (
                 <div>
@@ -83,10 +83,10 @@ const InviteUser = () => {
                       <form onSubmit={handleSubmit}>
                         <Button
                           type="submit"
-                          disabled={isLoading}
+                          disabled={isMutating}
                           className="!bg-green-500 !text-white text-[23px] !h-auto"
                         >
-                          {isLoading && (
+                          {isMutating && (
                             <Loader className="!w-6 !h-6 animate-spin" />
                           )}
                           Join the Workspace

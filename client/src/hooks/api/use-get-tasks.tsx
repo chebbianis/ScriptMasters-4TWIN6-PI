@@ -1,7 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
 // import { testApiConnection } from "@/lib/api";
 
-const useGetTasks = (workspaceId?: string) => {
+const useGetTasks = () => {
     // Utilisation de l'API réelle
     // return useQuery({
     //     queryKey: ["test-api"],
