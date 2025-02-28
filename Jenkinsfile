@@ -12,11 +12,11 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 // Installer les dépendances pour le back-end
-                dir('server') {  // Remplace 'server' par le nom réel du dossier back-end si différent
+                dir('server') {  
                     sh 'npm install'
                 }
                 // Installer les dépendances pour le front-end
-                dir('client') {  // Remplace 'client' par le nom réel du dossier front-end si différent
+                dir('client') {  
                     sh 'npm install'
                 }
             }
@@ -31,19 +31,19 @@ pipeline {
         stage('Build Backend') {
             steps {
                 dir('server') {
-                    sh 'npm run build'
+                    echo 'Backend prêt - aucune compilation requise'
                 }
             }
         }
         stage('SonarQube Analysis') {
-          steps {
-            script {
-                def scannerHome = tool 'sonarQube'
-                withSonarQubeEnv {
-                    sh "${scannerHome}/bin/sonar-scanner "
+            steps {
+                script {
+                    def scannerHome = tool 'sonarQube'
+                    withSonarQubeEnv {
+                        sh "${scannerHome}/bin/sonar-scanner "
+                    }
                 }
+            }
         }
-    }
-}
     }
 }
