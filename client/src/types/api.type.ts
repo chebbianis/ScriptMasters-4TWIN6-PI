@@ -36,7 +36,7 @@ export type UserType = {
     name: string;
     owner: string;
     inviteCode: string;
-  };
+  } | null | undefined;
 };
 
 export type CurrentUserResponseType = {

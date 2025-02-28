@@ -11,13 +11,14 @@ import { logoutMutationFn } from "@/lib/api";
 
 
 type AuthResponseType = {
+  _id?: string;
   profilePicture?: string;
-  currentWorkspace?: string;
+  currentWorkspace?: string | null;
   id: string;
   name: string;
   email: string;
   role: string;
-  WorkspaceId: string | null;
+  WorkspaceId?: string | null;
   accessToken: string;
   refreshToken: string;
 };
@@ -85,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem("accessToken", userData.accessToken);
     localStorage.setItem("refreshToken", userData.refreshToken);
     localStorage.setItem("user", JSON.stringify(userData));
-    setUser(userData);
+    setUser(userData ?? undefined);
     setIsLoading(false);
 
 
