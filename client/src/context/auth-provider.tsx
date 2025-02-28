@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createContext, useContext, useEffect, useState } from "react";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { WorkspaceType } from "@/types/api.type";
+import { UserType, WorkspaceType } from "@/types/api.type";
 import useGetWorkspaceQuery from "@/hooks/api/use-get-workspace";
 import usePermissions from "@/hooks/use-permissions";
 import { PermissionType } from "@/constant";
@@ -123,7 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const permissions = usePermissions(user, workspace);
+  const permissions = usePermissions(user as unknown as UserType | undefined, workspace);
 
   const hasPermission = (permission: PermissionType): boolean => {
     return permissions.includes(permission);
