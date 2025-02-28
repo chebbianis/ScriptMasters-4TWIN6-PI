@@ -36,5 +36,15 @@ pipeline {
                 }
             }
         }
+        stage('SonarQube Analysis') {
+          steps {
+            script {
+                def scannerHome = tool 'sonarQube'
+                withSonarQubeEnv {
+                    sh "${scannerHome}/bin/sonar-scanner -Dsonar.branch.name=anis-jenkins"
+                }
+        }
+    }
+}
     }
 }
