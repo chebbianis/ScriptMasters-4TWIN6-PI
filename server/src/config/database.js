@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const DB_URI = "mongodb://localhost:27017/ScriptMasters";
+const DB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/ScriptMasters";
 
 export const initializeDatabase = async () => {
     try {

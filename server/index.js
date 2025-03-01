@@ -3,7 +3,6 @@ import { initializeDatabase } from './src/config/database.js';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import authRouter from './src/routes/authRoutes.js';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -108,8 +107,8 @@ function authenticateToken(req, res, next) {
 app.use(router);
 
 // Démarrage du serveur
-httpServer.listen(port, () => {
-    console.log(`🚀 Serveur démarré sur http://localhost:${port}`);
+httpServer.listen(port, '0.0.0.0', () => {
+    console.log(`🚀 Serveur démarré sur http://0.0.0.0:${port}`);
 });
 
 // Gestion des erreurs globales

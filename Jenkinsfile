@@ -45,5 +45,15 @@ pipeline {
                 }
             }
         }
+        stage('Build Docker Images') {
+           steps {
+              dir('client') {
+                  sh 'docker build -t scriptmasters-frontend:latest .'
+              }
+              dir('server') {
+                  sh 'docker build -t scriptmasters-backend:latest .'
+              }
+    }
+}
     }
 }

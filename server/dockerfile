@@ -1,0 +1,20 @@
+# Image de base Node.js compatible avec Mac M1 (ARM64)
+FROM node:18-alpine
+
+# Répertoire de travail dans le conteneur
+WORKDIR /app
+
+# Copie des fichiers de dépendances pour optimiser le cache
+COPY package*.json ./
+
+# Installation des dépendances 
+RUN npm install 
+
+# Copie du reste du code source
+COPY . .
+
+# Exposition du port utilisé par le backend (3000)
+EXPOSE 3000
+
+# Commande pour lancer le serveur avec nodemon
+CMD ["npm", "run", "dev"]
