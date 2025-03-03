@@ -4,10 +4,11 @@
 
 /* ... */
 html,
-hody {
+body {
   height: 100%;
   font-family: "DM Sans", serif !important;
 }
+
 em-emoji-picker {
   width: 350px;
   height: 400px;
@@ -18,27 +19,35 @@ em-emoji-picker {
 /* Custom scrollbar styles */
 .scrollbar {
   overflow-y: auto;
-  scrollbar-width: thin; /* Firefox */
-  scrollbar-color: rgba(176, 174, 174, 0.7) #ddd; /* Firefox */
+  scrollbar-width: thin;
+  /* Firefox */
+  scrollbar-color: rgba(176, 174, 174, 0.7) #ddd;
+  /* Firefox */
   transition: scrollbar-color 0.3s ease, scrollbar-width 0.3s ease;
 }
 
 .scrollbar::-webkit-scrollbar {
-  width: 8px; /* Scrollbar width */
+  width: 8px;
+  /* Scrollbar width */
 }
 
 .scrollbar::-webkit-scrollbar-track {
-  background: #ddd; /* Track color */
+  background: #ddd;
+  /* Track color */
 }
 
 .scrollbar::-webkit-scrollbar-thumb {
-  background-color: gray; /* Thumb color */
-  border-radius: 100%; /* Rounded edges */
-  transition: background-color 0.3s ease; /* Smooth color change */
+  background-color: gray;
+  /* Thumb color */
+  border-radius: 100%;
+  /* Rounded edges */
+  transition: background-color 0.3s ease;
+  /* Smooth color change */
 }
 
 .scrollbar:hover::-webkit-scrollbar-thumb {
-  background-color: darkgray; /* Hover effect */
+  background-color: darkgray;
+  /* Hover effect */
 }
 
 @layer base {
@@ -109,6 +118,7 @@ em-emoji-picker {
 
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
   .dark {
     --background: 0 0% 3.9%;
 
@@ -180,6 +190,7 @@ em-emoji-picker {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
