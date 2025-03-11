@@ -250,3 +250,144 @@ export const deleteTaskMutationFn = async ({
   );
   return response.data;
 };
+
+//********* UTILISATEURS EN ATTENTE ****************
+
+export const getPendingUsersQueryFn = async (): Promise<{
+  success: boolean;
+  count: number;
+  data: Array<{
+    id: string;
+    name: string;
+    email: string;
+    requestedRole: string;
+    requestedAt: string;
+    avatar: string | null;
+  }>;
+}> => {
+  const response = await API.get("/user/pending-user-list");
+  return response.data;
+};
+
+export const activateUserMutationFn = async ({
+  userId,
+  approved,
+}: {
+  userId: string;
+  approved: boolean;
+}): Promise<{
+  success: boolean;
+  message: string;
+  data?: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+}> => {
+  const response = await API.patch(`/user/activate/${userId}`, { approved });
+  return response.data;
+};
+
+//********* STATISTIQUES UTILISATEURS ****************
+
+export const getUserStatsQueryFn = async (): Promise<{
+  success: boolean;
+  data: {
+    totalUsers: number;
+    activeToday: number;
+    roleStats: Record<string, { count: number; active: number }>;
+    recentLogins: Array<{
+      id: string;
+      name: string;
+      role: string;
+      lastLogin: string;
+    }>;
+  };
+}> => {
+  const response = await API.get("/user/stats");
+  return response.data;
+};
+
+// Fonction pour rechercher des utilisateurs
+export const searchUsersQueryFn = async ({
+  query,
+  role,
+  status,
+  limit
+}: {
+  query?: string;
+  role?: 'all' | 'ADMIN' | 'PROJECT_MANAGER' | 'DEVELOPER';
+  status?: 'all' | 'active' | 'inactive';
+  limit?: number;
+}): Promise<{
+  success: boolean;
+  count: number;
+  data: Array<{
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    isActive: boolean;
+    lastLogin: string | null;
+    profilePicture: string | null;
+  }>;
+}> => {
+  const params = new URLSearchParams();
+  if (query) params.append('query', query);
+  if (role && role !== 'all') params.append('role', role);
+  if (status && status !== 'all') params.append('status', status);
+  if (limit) params.append('limit', limit.toString());
+
+  const url = `/user/search?${params.toString()}`;
+  const response = await API.get(url);
+  return response.data;
+};
+
+// Fonction pour exporter les utilisateurs
+export const exportUsersQueryFn = async (format: 'csv' | 'json' = 'csv'): Promise<void> => {
+  try {
+    // Utiliser l'URL complète du backend au lieu d'une URL relative
+    const baseURL = API.defaults.baseURL || 'http://localhost:3000'; // Récupérer l'URL de base d'Axios ou utiliser celle par défaut
+    const url = `${baseURL}/user/export?format=${format}`;
+
+    // Approche 1: Ouvrir dans un nouvel onglet
+    const newWindow = window.open(url, '_blank');
+
+    // Si la fenêtre est bloquée
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      // Approche 2: Utiliser un lien temporaire
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `utilisateurs.${format}`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  } catch (error) {
+    console.error("Erreur lors de l'exportation:", error);
+    throw new Error("Échec de l'exportation des utilisateurs");
+  }
+};
+
+// Fonction pour mettre à jour le rôle d'un utilisateur
+export const updateUserRoleMutationFn = async ({
+  userId,
+  role
+}: {
+  userId: string;
+  role: 'ADMIN' | 'PROJECT_MANAGER' | 'DEVELOPER';
+}): Promise<{
+  success: boolean;
+  message: string;
+  data?: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+}> => {
+  const response = await API.patch(`/user/${userId}/role`, { role });
+  return response.data;
+};

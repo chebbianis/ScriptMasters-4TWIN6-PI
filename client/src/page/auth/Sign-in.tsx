@@ -79,11 +79,22 @@ const SignIn = () => {
 
     mutate(values, {
       onSuccess: (data) => {
+        if (!data.isActive) {
+          toast({
+            title: "Compte non activé",
+            description: "Votre compte n'est pas encore confirmé. Veuillez attendre l'approbation d'un administrateur.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         login({
           id: data.id,
           name: data.name,
           email: data.email,
           role: data.role,
+          isActive: data.isActive,
+          lastLogin: data.lastLogin,
           WorkspaceId: data.WorkspaceId,
           accessToken: data.accessToken,
           refreshToken: data.refreshToken

@@ -27,7 +27,8 @@ const UserSchema = new Schema({
     },
     isActive: {
         type: Boolean,
-        default: false
+        default: false,
+        index: true
     },
     lastLogin: {
         type: Date,
@@ -44,7 +45,7 @@ const UserSchema = new Schema({
     },
     role: {
         type: String,
-        enum: ['ADMIN', 'PROJECT_MANAGER', 'TEAM_LEAD', 'DEVELOPER'],
+        enum: ['ADMIN', 'PROJECT_MANAGER', 'DEVELOPER'],
         default: 'DEVELOPER'
     }
 

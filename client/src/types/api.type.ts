@@ -10,6 +10,8 @@ export type LoginResponseType = {
   name: string;
   email: string;
   role: string;
+  isActive: boolean;
+  lastLogin: Date;
   WorkspaceId: string | null;
   accessToken: string;
   refreshToken: string;

@@ -8,7 +8,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs'
-import { loginUser, createUser, logoutUser } from './src/controllers/user.controller.js';
+import { loginUser, createUser, logoutUser, getPendingUsers, activateUser, getUserStats, searchUsers, exportUsers, updateUserRole } from './src/controllers/user.controller.js';
 
 // Configuration des paths
 const __filename = fileURLToPath(import.meta.url);
@@ -79,6 +79,17 @@ router.post('/logout', logoutUser);
 
 router.post('/register', createUser);
 
+router.get('/user/pending-user-list', getPendingUsers);
+
+router.patch('/user/activate/:userId', activateUser);
+
+router.get('/user/stats', getUserStats);
+
+router.get('/user/search', searchUsers);
+
+router.get('/user/export', exportUsers);
+
+router.patch('/user/:userId/role', updateUserRole);
 
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
