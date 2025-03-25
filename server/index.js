@@ -8,7 +8,12 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs'
-import { loginUser, createUser, logoutUser, getPendingUsers, activateUser, getUserStats, searchUsers, exportUsers, updateUserRole } from './src/controllers/user.controller.js';
+
+// Importation des fichiers de routes
+import userRoutes from './src/routes/user.routes.js';
+import workspaceRoutes from './src/routes/workspace.routes.js';
+import projectRoutes from './src/routes/project.routes.js';
+import taskRoutes from './src/routes/task.routes.js';
 
 // Configuration des paths
 const __filename = fileURLToPath(import.meta.url);
@@ -35,7 +40,6 @@ const app = express();
 const port = 3000;
 
 // Configuration de base
-
 app.use(express.json());
 app.use(express.static('public'));
 app.use(cors());
@@ -54,7 +58,7 @@ const io = new Server(httpServer, {
     }
 });
 
-// Routes
+// Routes principales
 const router = express.Router();
 
 router.get('/', (req, res) => {
@@ -68,29 +72,14 @@ router.get("/test", (req, res) => {
     });
 });
 
-//http://localhost:3000/login
-// {
-//     "email": "anis@esprit.tn",
-//     "password":"anis"
-// }
-router.post('/login', loginUser);
+// Utilisation des fichiers de routes modulaires
+// Les préfixes définissent la base de l'URL pour chaque ensemble de routes
+router.use('/user', userRoutes);
+router.use('/workspace', workspaceRoutes);
+router.use('/project', projectRoutes);
+router.use('/task', taskRoutes);
 
-router.post('/logout', logoutUser);
-
-router.post('/register', createUser);
-
-router.get('/user/pending-user-list', getPendingUsers);
-
-router.patch('/user/activate/:userId', activateUser);
-
-router.get('/user/stats', getUserStats);
-
-router.get('/user/search', searchUsers);
-
-router.get('/user/export', exportUsers);
-
-router.patch('/user/:userId/role', updateUserRole);
-
+// Middleware d'authentification 
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -114,7 +103,8 @@ function authenticateToken(req, res, next) {
         next();
     });
 }
-// POST /api/auth/register
+
+// Ajouter le routeur à l'application
 app.use(router);
 
 // Démarrage du serveur

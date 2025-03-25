@@ -1,6 +1,5 @@
 import API from "./axios-client";
 import {
-  AllMembersInWorkspaceResponseType,
   AllProjectPayloadType,
   AllProjectResponseType,
   AllTaskPayloadType,
@@ -27,18 +26,18 @@ import {
 export const loginMutationFn = async (
   data: loginType
 ): Promise<LoginResponseType> => {
-  const response = await API.post("login", data);
+  const response = await API.post("user/login", data);
   return response.data;
 };
 
 export const registerMutationFn = async (data: registerType) =>
-  await API.post("/register", data);
+  await API.post("user/register", data);
 
 export const logoutMutationFn = async (email: string) => {
   if (!email) {
     throw new Error("Email manquant");
   }
-  return await API.post("/logout", { email });
+  return await API.post("user/logout", { email });
 };
 
 // export const getCurrentUserQueryFn =
@@ -51,7 +50,7 @@ export const logoutMutationFn = async (email: string) => {
 //************* */
 
 export const createWorkspaceMutationFn = async (
-  data: CreateWorkspaceType
+  data: CreateWorkspaceType & { userId: string }
 ): Promise<CreateWorkspaceResponseType> => {
   const response = await API.post(`/workspace/create/new`, data);
   return response.data;
@@ -61,27 +60,60 @@ export const editWorkspaceMutationFn = async ({
   workspaceId,
   data,
 }: EditWorkspaceType) => {
-  const response = await API.put(`/workspace/update/${workspaceId}`, data);
+  // Récupérer l'ID de l'utilisateur actuel
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userId = user.id;
+
+  const payload = {
+    ...data,
+    userId
+  };
+
+  const response = await API.put(`/workspace/update/${workspaceId}`, payload);
   return response.data;
 };
 
 export const getAllWorkspacesUserIsMemberQueryFn =
   async (): Promise<AllWorkspaceResponseType> => {
-    const response = await API.get(`/workspace/all`);
+    // Récupérer l'ID de l'utilisateur actuel
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = user.id;
+
+    const response = await API.get(`/workspace/all?userId=${userId}`);
     return response.data;
   };
 
 export const getWorkspaceByIdQueryFn = async (
   workspaceId: string
 ): Promise<WorkspaceByIdResponseType> => {
-  const response = await API.get(`/workspace/${workspaceId}`);
+  // Vérifier que l'ID du workspace est valide
+  if (!workspaceId) {
+    throw new Error('ID de workspace non défini');
+  }
+
+  // Récupérer l'ID de l'utilisateur actuel
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userId = user.id;
+
+  if (!userId) {
+    throw new Error('Utilisateur non connecté');
+  }
+
+  const response = await API.get(`/workspace/${workspaceId}?userId=${userId}`);
   return response.data;
 };
 
-export const getMembersInWorkspaceQueryFn = async (
-  workspaceId: string
-): Promise<AllMembersInWorkspaceResponseType> => {
-  const response = await API.get(`/workspace/members/${workspaceId}`);
+export const getMembersInWorkspaceQueryFn = async (workspaceId: string) => {
+  // Récupérer l'ID de l'utilisateur connecté
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const userId = user?.id;
+
+  if (!userId) {
+    throw new Error('Utilisateur non connecté');
+  }
+
+  // Ajouter l'userId comme paramètre de requête
+  const response = await API.get(`/workspace/members/${workspaceId}?userId=${userId}`);
   return response.data;
 };
 
@@ -109,19 +141,41 @@ export const deleteWorkspaceMutationFn = async (
   message: string;
   currentWorkspace: string;
 }> => {
-  const response = await API.delete(`/workspace/delete/${workspaceId}`);
-  return response.data;
+  // Récupérer l'ID de l'utilisateur actuel
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userId = user.id;
+
+  console.log("Tentative de suppression du workspace:", workspaceId);
+  console.log("UserId:", userId);
+
+  try {
+    const response = await API.delete(`/workspace/delete/${workspaceId}?userId=${userId}`);
+    console.log("Réponse de suppression:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Erreur lors de la suppression:", error);
+    throw error;
+  }
 };
 
 //*******MEMBER ****************
 
 export const invitedUserJoinWorkspaceMutationFn = async (
-  iniviteCode: string
+  inviteCode: string
 ): Promise<{
   message: string;
   workspaceId: string;
 }> => {
-  const response = await API.post(`/member/workspace/${iniviteCode}/join`);
+  // Récupérer l'ID de l'utilisateur actuel
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userId = user.id;
+
+  if (!userId) {
+    throw new Error('Utilisateur non connecté');
+  }
+
+  // Corriger l'URL pour qu'elle corresponde à la route du serveur 
+  const response = await API.post(`/workspace/join/${inviteCode}`, { userId });
   return response.data;
 };
 
@@ -309,7 +363,7 @@ export const getUserStatsQueryFn = async (): Promise<{
   return response.data;
 };
 
-// Fonction pour rechercher des utilisateurs
+// Restaurer la fonction de recherche avancée (avec objet de paramètres)
 export const searchUsersQueryFn = async ({
   query,
   role,
@@ -341,6 +395,20 @@ export const searchUsersQueryFn = async ({
 
   const url = `/user/search?${params.toString()}`;
   const response = await API.get(url);
+  return response.data;
+};
+
+// Créer une nouvelle fonction pour la recherche simple
+export const searchUsersByKeywordQueryFn = async (
+  keyword: string
+): Promise<{
+  users: {
+    _id: string;
+    name: string;
+    email: string;
+  }[];
+}> => {
+  const response = await API.get(`/user/search/simple?keyword=${keyword}`);
   return response.data;
 };
 
@@ -390,4 +458,113 @@ export const updateUserRoleMutationFn = async ({
 }> => {
   const response = await API.patch(`/user/${userId}/role`, { role });
   return response.data;
+};
+
+// Inviter un membre dans un workspace
+export const inviteMemberToWorkspaceMutationFn = async ({
+  workspaceId,
+  email,
+  role
+}: {
+  workspaceId: string;
+  email: string;
+  role: 'ADMIN' | 'PROJECT_MANAGER' | 'DEVELOPER';
+}): Promise<{
+  success: boolean;
+  message: string;
+  data?: {
+    user: {
+      id: string;
+      email: string;
+      name: string;
+    };
+    role: string;
+  };
+}> => {
+  // Récupérer l'ID de l'utilisateur actuel
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const inviterId = user.id;
+
+  if (!inviterId) {
+    throw new Error('Utilisateur non connecté');
+  }
+
+  const payload = {
+    email,
+    role,
+    inviterId
+  };
+
+  const response = await API.post(`/workspace/${workspaceId}/invite`, payload);
+  return response.data;
+};
+
+// Rejoindre un workspace avec un code d'invitation
+export const joinWorkspaceWithInviteCodeMutationFn = async (
+  inviteCode: string
+): Promise<{
+  success: boolean;
+  message: string;
+  workspace?: {
+    _id: string;
+    name: string;
+    description: string;
+  };
+}> => {
+  // Récupérer l'ID de l'utilisateur actuel
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userId = user.id;
+
+  if (!userId) {
+    throw new Error('Utilisateur non connecté');
+  }
+
+  const response = await API.post(`/workspace/join/${inviteCode}`, { userId });
+  return response.data;
+};
+
+// Fonction pour mettre à jour le rôle d'un membre dans un workspace
+export const updateWorkspaceMemberRoleMutationFn = async ({
+  workspaceId,
+  userId,
+  role
+}: {
+  workspaceId: string;
+  userId: string;
+  role: 'ADMIN' | 'PROJECT_MANAGER' | 'DEVELOPER';
+}) => {
+  // Ajouter l'ID de l'utilisateur connecté comme paramètre de requête
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const requestingUserId = currentUser?.id;
+
+  const response = await API.patch(
+    `/workspace/${workspaceId}/member/${userId}/role?userId=${requestingUserId}`,
+    { role }
+  );
+  return response.data;
+};
+
+// Fonction pour supprimer un membre d'un workspace
+export const removeMemberFromWorkspaceMutationFn = async ({
+  workspaceId,
+  memberUserId
+}: {
+  workspaceId: string;
+  memberUserId: string;
+}) => {
+  // Récupérer l'ID de l'utilisateur actuel
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userId = user.id;
+
+  console.log("Tentative de suppression du membre:", memberUserId, "du workspace:", workspaceId);
+
+  try {
+    const response = await API.delete(
+      `/workspace/${workspaceId}/member/${memberUserId}?userId=${userId}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Erreur lors de la suppression du membre:", error);
+    throw error;
+  }
 };

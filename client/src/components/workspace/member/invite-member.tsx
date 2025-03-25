@@ -15,9 +15,9 @@ const InviteMember = () => {
 
   const inviteUrl = workspace
     ? `${window.location.origin}${BASE_ROUTE.INVITE_URL.replace(
-        ":inviteCode",
-        workspace.inviteCode
-      )}`
+      ":inviteCode",
+      workspace.inviteCode
+    )}`
     : "";
 
   const handleCopy = () => {
@@ -43,7 +43,7 @@ const InviteMember = () => {
         disable and create a new invite link for this Workspace at any time.
       </p>
 
-      <PermissionsGuard showMessage requiredPermission={Permissions.ADD_MEMBER}>
+      <PermissionsGuard showMessage requiredPermission={Permissions.INVITE_MEMBER}>
         {workspaceLoading ? (
           <Loader
             className="w-8 h-8 

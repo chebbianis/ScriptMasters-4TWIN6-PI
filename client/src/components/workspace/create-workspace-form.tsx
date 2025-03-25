@@ -49,7 +49,18 @@ export default function CreateWorkspaceForm({
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
-    mutate(values, {
+
+    // Récupérer l'ID de l'utilisateur actuel
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = user.id;
+
+    // Ajouter l'userId au payload
+    const payload = {
+      ...values,
+      userId
+    };
+
+    mutate(payload, {
       onSuccess: (data) => {
         queryClient.resetQueries({
           queryKey: ["userWorkspaces"],
@@ -61,7 +72,7 @@ export default function CreateWorkspaceForm({
       },
       onError: (error) => {
         toast({
-          title: "Error",
+          title: "Erreur",
           description: error.message,
           variant: "destructive",
         });

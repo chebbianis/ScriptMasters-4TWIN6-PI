@@ -83,8 +83,8 @@ export function DataTableFacetedFilter({
                     .filter((option) => selectedValueSet.has(option.value))
                     .map((option) => (
                       <Badge
-                        variant="secondary"
                         key={option.value}
+                        variant="secondary"
                         className="rounded-sm px-1 font-normal"
                       >
                         {option.label}
@@ -106,8 +106,8 @@ export function DataTableFacetedFilter({
                 const isSelected = selectedValueSet.has(option.value);
                 return (
                   <CommandItem
-                    className={`cursor-pointer`}
                     key={option.value}
+                    className={`cursor-pointer`}
                     onSelect={() => {
                       if (multiSelect) {
                         const updatedValues = isSelected

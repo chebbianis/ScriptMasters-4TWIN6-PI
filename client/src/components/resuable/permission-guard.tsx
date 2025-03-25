@@ -1,34 +1,37 @@
-import React from "react";
-import { PermissionType } from "@/constant";
+import { FC, ReactNode } from "react";
 import { useAuthContext } from "@/context/auth-provider";
 
-type PermissionsGuardProps = {
-  requiredPermission: PermissionType;
-  children: React.ReactNode;
+interface PermissionsGuardProps {
+  children: ReactNode;
+  permissions?: string[];
+  requiredPermission?: string;
   showMessage?: boolean;
-};
+}
 
-const PermissionsGuard: React.FC<PermissionsGuardProps> = ({
-  requiredPermission,
-  showMessage = false,
+const PermissionsGuard: FC<PermissionsGuardProps> = ({
   children,
+  permissions = [],
+  requiredPermission,
+  showMessage = false
 }) => {
   const { hasPermission } = useAuthContext();
 
-  if (!hasPermission(requiredPermission)) {
-    return (
-      showMessage && (
-        <div
-          className="text-center 
-        text-sm pt-3
-        italic
-        w-full
-        text-muted-foreground"
-        >
-          You do not have the permission to view this
-        </div>
-      )
-    );
+  // Support pour les deux façons de passer les permissions
+  const permissionArray = requiredPermission
+    ? [requiredPermission]
+    : (Array.isArray(permissions) ? permissions : []);
+
+  // Vérifie si l'utilisateur a au moins une des permissions requises
+  const hasRequiredPermission = permissionArray.some(permission =>
+    hasPermission(permission)
+  );
+
+  if (!hasRequiredPermission) {
+    return showMessage ? (
+      <div className="text-center p-4 text-muted-foreground">
+        Vous n'avez pas les permissions nécessaires.
+      </div>
+    ) : null;
   }
 
   return <>{children}</>;

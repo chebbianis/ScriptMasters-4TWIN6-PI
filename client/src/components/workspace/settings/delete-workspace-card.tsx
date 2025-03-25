@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { deleteWorkspaceMutationFn } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Loader } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const DeleteWorkspaceCard = () => {
@@ -24,23 +25,43 @@ const DeleteWorkspaceCard = () => {
   });
 
   const handleConfirm = () => {
+    toast({
+      title: "Suppression en cours",
+      description: "Veuillez patienter pendant que nous supprimons le workspace...",
+    });
+
     mutate(workspaceId, {
       onSuccess: (data) => {
         queryClient.invalidateQueries({
           queryKey: ["userWorkspaces"],
         });
-        navigate(`/workspace/${data.currentWorkspace}`);
-        setTimeout(() => onCloseDialog(), 100);
+
+        toast({
+          title: "Workspace supprimé",
+          description: "Le workspace a été supprimé avec succès",
+          variant: "success",
+        });
+
+        setTimeout(() => {
+          onCloseDialog();
+          if (data.currentWorkspace) {
+            navigate(`/workspace/${data.currentWorkspace}`);
+          } else {
+            // Si aucun autre workspace n'est disponible
+            navigate('/');
+          }
+        }, 100);
       },
       onError: (error) => {
         toast({
-          title: "Error",
-          description: error.message,
+          title: "Erreur de suppression",
+          description: error.message || "Impossible de supprimer le workspace",
           variant: "destructive",
         });
       },
     });
   };
+
   return (
     <>
       <div className="w-full">
@@ -49,7 +70,7 @@ const DeleteWorkspaceCard = () => {
             className="text-[17px] tracking-[-0.16px] dark:text-[#fcfdffef] font-semibold mb-1.5
            text-center sm:text-left"
           >
-            Delete Workspace
+            Supprimer le Workspace
           </h1>
         </div>
 
@@ -59,20 +80,21 @@ const DeleteWorkspaceCard = () => {
         >
           <div className="flex flex-col items-start justify-between py-0">
             <div className="flex-1 mb-2">
-              <p>
-                Deleting a workspace is a permanent action and cannot be undone.
-                Once you delete a workspace, all its associated data, including
-                projects, tasks, and member roles, will be permanently removed.
-                Please proceed with caution and ensure this action is
-                intentional.
+              <p className="text-muted-foreground">
+                La suppression d'un workspace est une action permanente et ne peut pas être annulée.
+                Une fois que vous supprimez un workspace, toutes les données associées, y compris
+                les projets, les tâches et les rôles des membres, seront définitivement supprimées.
+                Veuillez procéder avec prudence.
               </p>
             </div>
             <Button
-              className="shrink-0 flex place-self-end h-[40px]"
+              className="shrink-0 flex place-self-end h-[40px] mt-4"
               variant="destructive"
               onClick={onOpenDialog}
+              disabled={isPending}
             >
-              Delete Workspace
+              {isPending && <Loader className="mr-2 h-4 w-4 animate-spin" />}
+              Supprimer le Workspace
             </Button>
           </div>
         </PermissionsGuard>
@@ -83,10 +105,10 @@ const DeleteWorkspaceCard = () => {
         isLoading={isPending}
         onClose={onCloseDialog}
         onConfirm={handleConfirm}
-        title={`Delete  ${workspace?.name} Workspace`}
-        description={`Are you sure you want to delete? This action cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
+        title={`Supprimer ${workspace?.name}`}
+        description={`Êtes-vous sûr de vouloir supprimer ce workspace ? Cette action ne peut pas être annulée et toutes les données seront perdues.`}
+        confirmText="Supprimer"
+        cancelText="Annuler"
       />
     </>
   );

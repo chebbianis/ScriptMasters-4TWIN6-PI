@@ -22,6 +22,8 @@ import useWorkspaceId from "@/hooks/use-workspace-id";
 import useCreateWorkspaceDialog from "@/hooks/use-create-workspace-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { getAllWorkspacesUserIsMemberQueryFn } from "@/lib/api";
+import { useAuthContext } from "@/context/auth-provider";
+import { Permissions } from "@/constant";
 
 type WorkspaceType = {
   _id: string;
@@ -45,6 +47,9 @@ export function WorkspaceSwitcher() {
   });
 
   const workspaces = data?.workspaces;
+
+  const { hasPermission } = useAuthContext();
+  const canCreateWorkspace = hasPermission(Permissions.CREATE_WORKSPACE);
 
   React.useEffect(() => {
     if (workspaces?.length) {
@@ -135,17 +140,19 @@ export function WorkspaceSwitcher() {
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="gap-2 p-2 !cursor-pointer"
-                onClick={onOpen}
-              >
-                <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                  <Plus className="size-4" />
-                </div>
-                <div className="font-medium text-muted-foreground">
-                  Add workspace
-                </div>
-              </DropdownMenuItem>
+              {canCreateWorkspace && (
+                <DropdownMenuItem
+                  className="gap-2 p-2 !cursor-pointer"
+                  onClick={onOpen}
+                >
+                  <div className="flex size-6 items-center justify-center rounded-md border bg-background">
+                    <Plus className="size-4" />
+                  </div>
+                  <div className="font-medium text-muted-foreground">
+                    Ajouter un workspace
+                  </div>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </SidebarMenuItem>

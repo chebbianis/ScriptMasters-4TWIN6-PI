@@ -27,7 +27,7 @@ import { Permissions } from "@/constant";
 const AllMembers = () => {
   const { user, hasPermission } = useAuthContext();
 
-  const canChangeMemberRole = hasPermission(Permissions.CHANGE_MEMBER_ROLE);
+  const canChangeMemberRole = hasPermission(Permissions.EDIT_MEMBER_ROLE);
 
   const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
@@ -76,14 +76,14 @@ const AllMembers = () => {
         <Loader className="w-8 h-8 animate-spin place-self-center flex" />
       ) : null}
 
-      {members?.map((member) => {
+      {members?.map((member: any) => {
         const name = member.userId?.name;
-        const initials = getAvatarFallbackText(name);
-        const avatarColor = getAvatarColor(name);
+        const initials = getAvatarFallbackText(name || '');
+        const avatarColor = getAvatarColor(name || '');
         return (
-          <div className="flex items-center justify-between space-x-4">
+          <div key={member.userId} className="flex items-center justify-between space-x-4">
             <div className="flex items-center space-x-4">
-              <Avatar className="h-8 w-8">
+              <Avatar className="h-8 w-8" style={{ backgroundColor: avatarColor }}>
                 <AvatarImage
                   src={member.userId?.profilePicture || ""}
                   alt="Image"
@@ -134,7 +134,7 @@ const AllMembers = () => {
                             <CommandEmpty>No roles found.</CommandEmpty>
                             <CommandGroup>
                               {roles?.map(
-                                (role) =>
+                                (role: { _id: string; name: string }) =>
                                   role.name !== "OWNER" && (
                                     <CommandItem
                                       key={role._id}

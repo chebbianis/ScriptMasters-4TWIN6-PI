@@ -1,11 +1,30 @@
 import { Separator } from "@/components/ui/separator";
 import WorkspaceHeader from "@/components/workspace/common/workspace-header";
-import EditWorkspaceForm from "@/components/workspace/edit-workspace-form";
 import DeleteWorkspaceCard from "@/components/workspace/settings/delete-workspace-card";
 import { Permissions } from "@/constant";
 import withPermission from "@/hoc/with-permission";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import GeneralSettings from "@/components/workspace/settings/general";
+import MembersSettings from "@/components/workspace/settings/members";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 const Settings = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState("general");
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setSearchParams({ tab: value });
+  };
+
   return (
     <div className="w-full h-auto py-2">
       <WorkspaceHeader />
@@ -16,14 +35,32 @@ const Settings = () => {
             Workspace settings
           </h2>
 
-          <div className="flex flex-col pt-0.5 px-0 ">
-            <div className="pt-2">
-              <EditWorkspaceForm />
-            </div>
-            <div className="pt-2">
-              <DeleteWorkspaceCard />
-            </div>
-          </div>
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="general">Général</TabsTrigger>
+              <TabsTrigger value="members">Membres</TabsTrigger>
+              <TabsTrigger value="advanced">Avancé</TabsTrigger>
+            </TabsList>
+            <TabsContent value="general">
+              <GeneralSettings />
+            </TabsContent>
+            <TabsContent value="members">
+              <MembersSettings />
+            </TabsContent>
+            <TabsContent value="advanced">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium">Paramètres avancés</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Gérez les paramètres avancés de votre workspace, comme la suppression.
+                  </p>
+                </div>
+                <div className="space-y-4 border-t pt-4">
+                  <DeleteWorkspaceCard />
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
     </div>

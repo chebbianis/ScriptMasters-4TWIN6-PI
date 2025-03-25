@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Search, Download, Users, Check, Clock } from "lucide-react";
+import { Search, Download, Users, Check, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { searchUsersQueryFn, updateUserRoleMutationFn } from "@/lib/api";
+import { updateUserRoleMutationFn } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import API from "@/lib/axios-client";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const UserSearch = () => {
     const [searchParams, setSearchParams] = useState({
@@ -27,9 +28,53 @@ const UserSearch = () => {
 
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['searchUsers', searchParams],
-        queryFn: () => searchUsersQueryFn(searchParams),
+        queryFn: async () => {
+            // Construire les paramètres de recherche
+            const params = new URLSearchParams();
+
+            // Ajouter le mot-clé de recherche s'il existe
+            if (searchParams.query) params.append('keyword', searchParams.query);
+
+            // Ajouter le rôle s'il est spécifié
+            if (searchParams.role !== 'all') params.append('role', searchParams.role);
+
+            // Ajouter le statut s'il est spécifié
+            if (searchParams.status !== 'all') params.append('status', searchParams.status);
+
+            // Ajouter la limite
+            params.append('limit', searchParams.limit.toString());
+
+            console.log("Paramètres de recherche:", Object.fromEntries(params.entries()));
+
+            // Utiliser l'endpoint standard /user/search
+            const response = await API.get(`/user/search?${params.toString()}`);
+
+            // Ajouter un log pour voir la structure de données brute
+            console.log("Données brutes de l'API:", response.data);
+
+            // Transformer les données au format attendu par le composant
+            // en vérifiant plus explicitement la propriété role
+            return {
+                success: response.data.success,
+                count: response.data.users?.length || 0,
+                data: (response.data.users || []).map((user: any) => {
+                    console.log("Utilisateur brut:", user);
+                    return {
+                        id: user._id || user.id,
+                        name: user.name,
+                        email: user.email,
+                        // S'assurer que la propriété role est bien définie
+                        role: user.role || "",
+                        isActive: user.isActive !== undefined ? user.isActive : true,
+                        lastLogin: user.lastLogin || null
+                    };
+                })
+            };
+        },
         enabled: true
     });
+
+    console.log("Données reçues:", data);
 
     // Mutation pour modifier le rôle
     const { mutate: updateRole, isPending: isUpdatingRole } = useMutation({
@@ -49,6 +94,30 @@ const UserSearch = () => {
             toast({
                 title: "Erreur",
                 description: "Impossible de modifier le rôle de l'utilisateur.",
+                variant: "destructive",
+            });
+        }
+    });
+
+    // Ajouter une nouvelle mutation pour la suppression
+    const { mutate: deleteUser, isPending: isDeleting } = useMutation({
+        mutationFn: async (userId: string) => {
+            const response = await API.delete(`/user/${userId}`);
+            return response.data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['searchUsers'] });
+            queryClient.invalidateQueries({ queryKey: ['userStats'] });
+            toast({
+                title: "Utilisateur supprimé",
+                description: "L'utilisateur a été supprimé avec succès",
+                variant: "default",
+            });
+        },
+        onError: () => {
+            toast({
+                title: "Erreur",
+                description: "Impossible de supprimer l'utilisateur",
                 variant: "destructive",
             });
         }
@@ -98,7 +167,17 @@ const UserSearch = () => {
     };
 
     const handleRoleChange = (userId: string, newRole: 'ADMIN' | 'PROJECT_MANAGER' | 'DEVELOPER') => {
+        if (!userId) {
+            toast({
+                title: "Erreur",
+                description: "ID utilisateur non valide",
+                variant: "destructive",
+            });
+            return;
+        }
+
         updateRole({ userId, role: newRole });
+        console.log(`Modification du rôle pour l'utilisateur ${userId} : ${newRole}`);
     };
 
     const formatDate = (dateString: string | null) => {
@@ -111,6 +190,9 @@ const UserSearch = () => {
             minute: '2-digit'
         });
     };
+
+
+    const users = data?.data || [];
 
     return (
         <Card className="shadow-lg">
@@ -189,7 +271,7 @@ const UserSearch = () => {
                     <div className="flex justify-center my-10">
                         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                     </div>
-                ) : data?.data && data.data.length > 0 ? (
+                ) : users.length > 0 ? (
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -197,11 +279,12 @@ const UserSearch = () => {
                                 <TableHead>Rôle</TableHead>
                                 <TableHead>Statut</TableHead>
                                 <TableHead className="text-right">Dernière connexion</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {data.data.map((user) => (
-                                <TableRow key={user.id}>
+                            {users.map((user: any) => (
+                                <TableRow key={user.id || user._id}>
                                     <TableCell>
                                         <div className="flex items-center space-x-3">
                                             <Avatar>
@@ -214,7 +297,7 @@ const UserSearch = () => {
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        {editingUser === user.id ? (
+                                        {editingUser === (user.id || user._id) ? (
                                             <div className="flex items-center gap-2">
                                                 <Select
                                                     defaultValue={user.role}
@@ -243,23 +326,60 @@ const UserSearch = () => {
                                                 </Button>
                                             </div>
                                         ) : (
-                                            <Badge variant="outline" className="cursor-pointer" onClick={() => setEditingUser(user.id)}>
-                                                {user.role}
+                                            <Badge
+                                                variant={
+                                                    user.role === "ADMIN" ? "destructive" :
+                                                        user.role === "PROJECT_MANAGER" ? "default" :
+                                                            "outline"
+                                                }
+                                                className="cursor-pointer hover:opacity-90"
+                                                onClick={() => setEditingUser(user.id || user._id)}
+                                            >
+                                                {user.role === "ADMIN" ? "Administrateur" :
+                                                    user.role === "PROJECT_MANAGER" ? "Chef de projet" :
+                                                        user.role === "DEVELOPER" ? "Développeur" :
+                                                            "Non défini"}
                                             </Badge>
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        <Badge className={user.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                                            {user.isActive ? 'Actif' : 'Inactif'}
+                                        <Badge variant={user.isActive === true ? "default" : "secondary"}>
+                                            {user.isActive === true ? "Actif" : "Inactif"}
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <div className="flex items-center gap-1.5 text-sm justify-end">
-                                            <Clock className="h-3.5 w-3.5 text-gray-500" />
-                                            <span className={!user.lastLogin ? "text-gray-500 italic" : ""}>
-                                                {formatDate(user.lastLogin)}
-                                            </span>
-                                        </div>
+                                        {formatDate(user.lastLogin)}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Êtes-vous sûr?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Cette action est irréversible. Cela supprimera définitivement l'utilisateur
+                                                        <span className="font-semibold"> {user.name}</span> et toutes ses données associées.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        onClick={() => deleteUser(user.id || user._id)}
+                                                        className="bg-red-500 hover:bg-red-600"
+                                                    >
+                                                        {isDeleting ? "Suppression..." : "Supprimer"}
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </TableCell>
                                 </TableRow>
                             ))}

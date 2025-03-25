@@ -20,7 +20,12 @@ export const formatStatusToEnum = (status: string): string => {
   return status.toUpperCase().replace(/\s+/g, "_");
 };
 
-export const getAvatarColor = (initials: string): string => {
+export function getAvatarColor(name: string | undefined): string {
+  // Protection contre les valeurs undefined ou null
+  if (!name) {
+    return '#888888'; // Couleur par défaut
+  }
+
   const colors = [
     "bg-red-500 text-white",
     "bg-blue-500 text-white",
@@ -34,12 +39,12 @@ export const getAvatarColor = (initials: string): string => {
   ];
 
   // Simple hash to map initials to a color index
-  const hash = initials
+  const hash = name
     .split("")
     .reduce((acc, char) => acc + char.charCodeAt(0), 0);
 
   return colors[hash % colors.length];
-};
+}
 
 export const getAvatarFallbackText = (name: string) => {
   if (!name) return "NA";

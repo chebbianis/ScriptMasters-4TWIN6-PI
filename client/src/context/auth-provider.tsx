@@ -1,10 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createContext, useContext, useEffect, useState } from "react";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { UserType, WorkspaceType } from "@/types/api.type";
+import { WorkspaceType } from "@/types/api.type";
 import useGetWorkspaceQuery from "@/hooks/api/use-get-workspace";
-import usePermissions from "@/hooks/use-permissions";
-import { PermissionType } from "@/constant";
 import { useQueryClient } from "@tanstack/react-query";
 import { logoutMutationFn } from "@/lib/api";
 
@@ -28,7 +26,7 @@ type AuthResponseType = {
 type AuthContextType = {
   user: AuthResponseType | null;
   workspace?: WorkspaceType;
-  hasPermission: (permission: PermissionType) => boolean;
+  hasPermission: (permission: string) => boolean;
   error: any;
   isLoading: boolean;
   isFetching: boolean;
@@ -36,6 +34,7 @@ type AuthContextType = {
   refetchWorkspace: () => void;
   login: (userData: AuthResponseType) => void;
   logout: () => void;
+  hasWorkspaceRole: (workspaceId: string, roles: string[]) => boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -125,10 +124,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const permissions = usePermissions(user as unknown as UserType | undefined, workspace);
 
-  const hasPermission = (permission: PermissionType): boolean => {
-    return permissions.includes(permission);
+  const hasPermission = (permission: string): boolean => {
+    if (user?.role === 'ADMIN') return true;
+
+    const memberPermissions = workspace?.members?.find(
+      (m: any) => m.userId === user?.id
+    )?.permissions || [];
+
+    return memberPermissions.includes(permission);
+  };
+
+  const hasWorkspaceRole = (workspaceId: string, roles: string[]): boolean => {
+    const membership = workspace?.members?.find(
+      (m: { workspaceId: string; role: string; }) => m.workspaceId === workspaceId && roles.includes(m.role)
+    );
+    return !!membership;
   };
 
   return (
@@ -144,6 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         refetchWorkspace,
         login,
         logout,
+        hasWorkspaceRole,
       }}
     >
       {children}

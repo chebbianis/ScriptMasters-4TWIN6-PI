@@ -326,59 +326,61 @@ export const getUserStats = async (req, res) => {
     }
 };
 
-// Nouvelle fonction pour rechercher des utilisateurs
+// Modifions la fonction searchUsers pour prendre en compte les filtres de rôle et statut
 export const searchUsers = async (req, res) => {
     try {
-        const { query, role, status, limit = 10 } = req.query;
+        const { keyword = "", role, status, limit = 50 } = req.query;
 
-        // Construire les critères de recherche
-        const searchCriteria = {};
+        console.log("Recherche d'utilisateurs avec les paramètres:", { keyword, role, status, limit });
 
-        if (query) {
-            searchCriteria.$or = [
-                { name: { $regex: query, $options: 'i' } },
-                { email: { $regex: query, $options: 'i' } }
+        // Construire la requête
+        let query = {};
+
+        // Si un mot-clé est fourni, filtrer par ce mot-clé
+        if (keyword && keyword.trim() !== "") {
+            query.$or = [
+                { email: { $regex: keyword, $options: 'i' } },
+                { name: { $regex: keyword, $options: 'i' } }
             ];
         }
 
-        if (role && ['ADMIN', 'PROJECT_MANAGER', 'DEVELOPER'].includes(role)) {
-            searchCriteria.role = role;
+        // Filtrer par rôle si spécifié
+        if (role && role !== 'all') {
+            query.role = role;
         }
 
-        if (status === 'active') {
-            searchCriteria.isActive = true;
-        } else if (status === 'inactive') {
-            searchCriteria.isActive = false;
+        // Filtrer par statut si spécifié
+        if (status && status !== 'all') {
+            query.isActive = status === 'active';
         }
 
-        // Exécuter la recherche
-        const users = await User.find(searchCriteria)
+        console.log("Requête MongoDB:", JSON.stringify(query, null, 2));
+
+        // Récupérer les utilisateurs
+        const users = await User.find(query)
+            .select('_id name email role isActive lastLogin')
             .limit(parseInt(limit))
-            .select('name email role isActive lastLogin profilePicture')
             .sort({ name: 1 });
 
-        // Formater la réponse
-        const formattedUsers = users.map(user => ({
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            isActive: user.isActive,
-            lastLogin: user.lastLogin,
-            profilePicture: user.profilePicture
-        }));
+        console.log(`Trouvé ${users.length} utilisateurs`);
 
         res.status(200).json({
             success: true,
-            count: formattedUsers.length,
-            data: formattedUsers
+            users: users.map(user => ({
+                _id: user._id,
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                isActive: user.isActive,
+                lastLogin: user.lastLogin
+            }))
         });
-
     } catch (error) {
-        console.error('Erreur lors de la recherche d\'utilisateurs:', error);
+        console.error('Erreur lors de la recherche des utilisateurs:', error);
         res.status(500).json({
             success: false,
-            error: 'Erreur lors de la recherche d\'utilisateurs'
+            error: 'Erreur serveur lors de la recherche des utilisateurs'
         });
     }
 };
@@ -483,6 +485,97 @@ export const updateUserRole = async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Erreur lors de la modification du rôle'
+        });
+    }
+};
+
+// Ajouter cette nouvelle fonction pour la recherche simple d'utilisateurs
+export const searchUsersSimple = async (req, res) => {
+    try {
+        const { keyword = "" } = req.query;
+
+        console.log("Recherche simple d'utilisateurs avec le mot-clé:", keyword);
+
+        // Construire la requête pour chercher par email ou nom
+        let query = {};
+
+        // Si un mot-clé est fourni, filtrer par ce mot-clé
+        if (keyword && keyword.trim() !== "") {
+            query = {
+                $or: [
+                    { email: { $regex: keyword, $options: 'i' } },
+                    { name: { $regex: keyword, $options: 'i' } }
+                ]
+            };
+        }
+
+        // Récupérer les utilisateurs avec plus de champs
+        const users = await User.find(query)
+            .select('_id name email role isActive lastLogin')
+            .limit(50)
+            .sort({ name: 1 });
+
+        res.status(200).json({
+            success: true,
+            users: users.map(user => ({
+                _id: user._id,
+                id: user._id, // Ajouter id pour compatibilité
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                isActive: user.isActive,
+                lastLogin: user.lastLogin
+            }))
+        });
+    } catch (error) {
+        console.error('Erreur lors de la recherche simple des utilisateurs:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erreur serveur lors de la recherche des utilisateurs'
+        });
+    }
+};
+
+// Fonction pour supprimer un utilisateur
+export const deleteUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        console.log(`Tentative de suppression de l'utilisateur avec ID: ${userId}`);
+
+        // Vérifier si l'utilisateur existe
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'Utilisateur non trouvé'
+            });
+        }
+
+        // Vérifier si l'utilisateur qui fait la demande est un admin
+        // Cette vérification est optionnelle mais recommandée pour la sécurité
+        const requestingUser = req.user;
+        if (requestingUser && requestingUser.role !== 'ADMIN') {
+            return res.status(403).json({
+                success: false,
+                error: 'Permission refusée. Seuls les administrateurs peuvent supprimer des utilisateurs'
+            });
+        }
+
+        // Supprimer l'utilisateur
+        await User.findByIdAndDelete(userId);
+
+        // Retourner une réponse réussie
+        res.status(200).json({
+            success: true,
+            message: `L'utilisateur ${user.name} a été supprimé avec succès`
+        });
+
+    } catch (error) {
+        console.error("Erreur lors de la suppression de l'utilisateur:", error);
+        res.status(500).json({
+            success: false,
+            error: "Erreur serveur lors de la suppression de l'utilisateur"
         });
     }
 };
