@@ -3,20 +3,56 @@ import Task from '../models/task.model.js';
 import { TaskStatus } from '../models/task.model.js';
 
 // Créer un nouveau projet
+/*
+Test Postman pour createProject:
+
+1. Méthode: POST
+2. URL: http://localhost:3000/api/projects/create
+3. Headers:
+   - Content-Type: application/json
+   - Authorization: Bearer <votre_token_jwt>
+4. Body (raw JSON):
+   {
+       "name": "Projet Test",
+       "description": "Description du projet de test",
+       "emoji": "🚀",
+       "workspaceId": "65f1a2b3c4d5e6f7g8h9i0j1"
+   }
+
+5. Réponse attendue (201 Created):
+   {
+       "success": true,
+       "message": "Projet créé avec succès",
+       "project": {
+           "_id": "65f1a2b3c4d5e6f7g8h9i0j2",
+           "name": "Projet Test",
+           "description": "Description du projet de test",
+           "emoji": "🚀",
+           "workspaceId": "65f1a2b3c4d5e6f7g8h9i0j1",
+           "createdBy": "65f1a2b3c4d5e6f7g8h9i0j3",
+           "createdAt": "2024-03-13T12:00:00.000Z",
+           "updatedAt": "2024-03-13T12:00:00.000Z"
+       }
+   }
+
+6. Erreur possible (500 Internal Server Error):
+   {
+       "success": false,
+       "error": "Erreur serveur lors de la création du projet"
+   }
+*/
+
 export const createProject = async (req, res) => {
     try {
-        const { name, description, emoji, workspaceId } = req.body;
+        const { name, description, emoji, workspaceId, createdBy } = req.body;
 
-        // Vérifier que l'utilisateur a accès à cet espace de travail
-        // Cette vérification pourrait être implémentée selon la logique de votre application
-
-        // Créer le projet
+        // Créer le projet en utilisant l'ID fourni dans le corps de la requête
         const project = await Project.create({
             name,
             description,
             emoji: emoji || '📊',
             workspaceId,
-            createdBy: req.user.id
+            createdBy: createdBy // Utiliser l'ID fourni par le client
         });
 
         res.status(201).json({
