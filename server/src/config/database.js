@@ -5,10 +5,7 @@ const DB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/ScriptMaste
 
 export const initializeDatabase = async () => {
     try {
-        await mongoose.connect(DB_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        });
+        await mongoose.connect(DB_URI);
         console.log("✅ Connected to MongoDB");
 
         mongoose.connection.on('connected', () => {
