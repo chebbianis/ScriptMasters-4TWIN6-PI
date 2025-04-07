@@ -3,100 +3,69 @@ import Project from '../models/project.model.js';
 import mongoose from 'mongoose';
 import { Workspace } from '../models/workspace.model.js';
 
-// Créer une nouvelle tâche
-// export const createTask = async (req, res) => {
-//     try {
-//         const { title, description, status, priority, dueDate, projectId, assignedTo } = req.body;
 
-//         // Create task without any user reference
-//         const task = await Task.create({
-//             title,
-//             description,
-//             status,
-//             priority,
-//             dueDate: dueDate ? new Date(dueDate) : null,
-//             project: projectId,
-//             assignedTo: assignedTo || null
-//         });
-
-//         // Simplified population (optional)
-//         await task.populate([
-//             { path: 'project', select: 'name emoji' },
-//             { path: 'assignedTo', select: 'name profilePicture' }
-//         ]);
-
-//         res.status(201).json({
-//             success: true,
-//             task
-//         });
-        
-//     } catch (error) {
-//         console.error('Task creation error:', error);
-//         res.status(500).json({ 
-//             success: false,
-//             error: 'Failed to create task'        
-//         });
-//     }
-// };
 export const createTask = async (req, res) => {
     try {
-        const { title, description, status, priority, dueDate, projectId, assignedTo, workspaceId } = req.body;
+        const { title, description, status, priority, dueDate, projectId, assignedTo } = req.body;
 
         // Validate required fields
         if (!title) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Title is required' 
-            });
+            return res.status(400).json({ success: false, error: 'Title is required' });
         }
         if (!projectId) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Project ID is required' 
-            });
+            return res.status(400).json({ success: false, error: 'Project ID is required' });
         }
 
         // Verify project exists
         const projectExists = await mongoose.model('Project').findById(projectId);
         if (!projectExists) {
-            return res.status(404).json({ 
-                success: false, 
-                error: 'Project not found' 
-            });
-        }
-
-        // If workspaceId is not provided, use the project's workspaceId
-        const effectiveWorkspaceId = workspaceId || projectExists.workspaceId;
-        
-        // Verify project belongs to the specified workspace if workspaceId is provided
-        if (workspaceId && projectExists.workspaceId && projectExists.workspaceId.toString() !== workspaceId) {
-            return res.status(403).json({ 
-                success: false, 
-                error: 'Project does not belong to the specified workspace' 
-            });
+            return res.status(404).json({ success: false, error: 'Project not found' });
         }
 
         // Verify assignedTo exists if provided
         if (assignedTo) {
             const userExists = await mongoose.model('User').findById(assignedTo);
             if (!userExists) {
-                return res.status(404).json({ 
-                    success: false, 
-                    error: 'Assigned user not found' 
-                });
+                return res.status(404).json({ success: false, error: 'Assigned user not found' });
             }
         }
 
-        // Create task
+        // Generate unique task code with a loop
+        const Task = mongoose.model('Task');
+        let taskCode;
+        let nextNumber = 1; // Start with 1 if no tasks exist
+
+        while (!taskCode) {
+            // Find the highest existing task code for this project
+            const lastTask = await Task.findOne({ project: projectId })
+                .sort({ taskCode: -1 }) // Sort descending by taskCode
+                .select('taskCode');
+
+            if (lastTask && lastTask.taskCode) {
+                const lastNumber = parseInt(lastTask.taskCode.replace('TSK-', ''), 10);
+                nextNumber = lastNumber + 1; // Increment the highest found number
+            }
+
+            const proposedCode = `TSK-${nextNumber.toString().padStart(3, '0')}`;
+            const exists = await Task.exists({ taskCode: proposedCode });
+
+            if (!exists) {
+                taskCode = proposedCode; // Found a unique code, exit the loop
+            } else {
+                nextNumber++; // Increment and keep looping if the code exists
+            }
+        }
+
+        // Create task with the generated taskCode
         const task = await Task.create({
+            taskCode,
             title,
             description: description || '',
-            status: status || Task.TaskStatus.TODO, // Use Task.TaskStatus
-            priority: priority || Task.TaskPriority.MEDIUM, // Use Task.TaskPriority
+            status: status || Task.TaskStatus.TODO,
+            priority: priority || Task.TaskPriority.MEDIUM,
             dueDate: dueDate ? new Date(dueDate) : null,
             project: projectId,
-            assignedTo: assignedTo || null,
-            workspaceId: effectiveWorkspaceId // Add workspaceId to the task
+            assignedTo: assignedTo || null
         });
 
         // Populate references
@@ -122,7 +91,7 @@ export const createTask = async (req, res) => {
         if (error.code === 11000) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Duplicate task code' 
+                error: 'Duplicate task code detected' 
             });
         }
         res.status(500).json({ 
