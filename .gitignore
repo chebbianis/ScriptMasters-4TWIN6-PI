@@ -58,4 +58,4 @@ lerna-debug.log*
 *.tgz
 
 # Yarn Integrity file
-.yarn-integrity 
+.yarn-integrity
