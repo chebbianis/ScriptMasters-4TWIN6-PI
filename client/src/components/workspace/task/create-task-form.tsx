@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Loader } from "lucide-react";
+import { Loader, Sparkles } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { TaskPriorityEnum, TaskStatusEnum } from "@/constant";
@@ -17,6 +17,7 @@ import { useAuthContext } from "@/context/auth-provider";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { getProjectNamesQueryFn } from "@/lib/api";
 import TaskAttachments from './task-attachments';
+import { useTaskPriorityPrediction } from "@/hooks/use-task-priority-prediction";
 
 // Define the form schema type
 type FormValues = {
@@ -76,6 +77,10 @@ export default function CreateTaskForm({
   const { user } = useAuthContext();
   const currentWorkspaceId = useWorkspaceId();
   const effectiveWorkspaceId = workspaceId || currentWorkspaceId || user?.WorkspaceId || "";
+  const [showPrediction, setShowPrediction] = useState(false);
+  const [predictionConfidence, setPredictionConfidence] = useState<number | null>(null);
+  const [predictionFailed, setPredictionFailed] = useState(false);
+  const queryClient = useQueryClient();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -96,16 +101,74 @@ export default function CreateTaskForm({
           description: "",
           status: TaskStatusEnum.TODO,
           priority: TaskPriorityEnum.MEDIUM,
-          dueDate: new Date().toISOString().split("T")[0], // Default to today
+          dueDate: new Date().toISOString().split("T")[0],
           projectId: "",
           assignedTo: "",
         },
   });
 
+  const { mutate: predictPriority, isPending: isPredicting } = useTaskPriorityPrediction();
+
+  // Watch form values for prediction
+  const description = form.watch("description");
+  const dueDate = form.watch("dueDate");
+  const projectId = form.watch("projectId");
+
+  useEffect(() => {
+    const predictTaskPriority = async () => {
+      if (!description || !projectId) {
+        setShowPrediction(false);
+        setPredictionFailed(false);
+        return;
+      }
+      const daysUntilDue = dueDate 
+        ? Math.ceil((new Date(dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+      const features = {
+        descriptionLength: description.length,
+        hasDueDate: !!dueDate,
+        daysUntilDue,
+        assignedToWorkload: 1,
+        projectProgress: 0.5,
+        taskDependencies: 0,
+      };
+      try {
+        predictPriority(features, {
+          onSuccess: (data) => {
+            console.log('Prediction API success:', data);
+            if (data.status === 'success') {
+              form.setValue('priority', data.priority);
+              setPredictionConfidence(data.confidence);
+              setShowPrediction(true);
+              setPredictionFailed(false);
+            } else {
+              form.setValue('priority', TaskPriorityEnum.MEDIUM);
+              setShowPrediction(false);
+              setPredictionFailed(true);
+            }
+          },
+          onError: (error) => {
+            console.error('Prediction API error:', error);
+            form.setValue('priority', TaskPriorityEnum.MEDIUM);
+            setShowPrediction(false);
+            setPredictionFailed(true);
+          }
+        });
+      } catch (error) {
+        console.error('Prediction error:', error);
+        form.setValue('priority', TaskPriorityEnum.MEDIUM);
+        setShowPrediction(false);
+        setPredictionFailed(true);
+      }
+    };
+    const debounceTimer = setTimeout(predictTaskPriority, 1000);
+    return () => clearTimeout(debounceTimer);
+  }, [description, dueDate, projectId, predictPriority, form]);
+
   // Fetch tasks and extract unique projects
   const { data: projectsData, isLoading: isProjectsLoading } = useQuery({
     queryKey: ["projects", effectiveWorkspaceId],
-    queryFn: () => getProjectNamesQueryFn(effectiveWorkspaceId),
+    queryFn: () => getProjectNamesQueryFn(),
     enabled: !!effectiveWorkspaceId,
   });
 
@@ -116,7 +179,7 @@ export default function CreateTaskForm({
     mutationFn: async (values: FormValues) => {
       const { projectId, ...updateValues } = values;
       if (isEditMode && taskId) {
-        const response = await axios.put(`http://localhost:3000/task/${taskId}`, {
+        const response = await axios.put(`http://localhost:3000/api/task/${taskId}`, {
           ...updateValues,
           dueDate: updateValues.dueDate || undefined,
           assignedTo: updateValues.assignedTo || undefined,
@@ -133,54 +196,56 @@ export default function CreateTaskForm({
           throw new Error("No project selected. Please select a project first.");
         }
         
-        const response = await axios.post("http://localhost:3000/task/create", {
+        const response = await axios.post("http://localhost:3000/api/task/create", {
           ...values,
           dueDate: values.dueDate || undefined,
           assignedTo: values.assignedTo || undefined,
-          workspaceId: effectiveWorkspaceId, // Add workspaceId to the request
-          createdBy: user?._id || user?.id, // Add the current user's ID as createdBy
+          workspaceId: effectiveWorkspaceId,
+          createdBy: user?._id || user?.id
         });
         return response.data;
       }
     },
     onSuccess: (data) => {
       toast({
-        title: "Success",
-        description: isEditMode ? "Task updated successfully" : "Task created successfully",
-        variant: "default",
+        title: isEditMode ? "Task updated" : "Task created",
+        description: isEditMode ? "Your task has been updated successfully." : "Your task has been created successfully.",
       });
-      if (isEditMode && onSuccess) {
+      // Invalidate tasks query so the table refreshes
+      queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
+      if (onSuccess) {
         onSuccess(data.task);
       }
-      if (!isEditMode) {
-        form.reset();
+      if (onClose) {
+        onClose();
       }
-      if (onClose) onClose();
     },
     onError: (error: any) => {
-      console.error(`Failed to ${isEditMode ? "update" : "create"} task:`, error);
-      
-      // Extract error message from different possible sources
-      let errorMessage = "Failed to create task";
-      if (error.message) {
-        errorMessage = error.message;
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      }
-      
+      console.error("Task creation error:", error);
       toast({
         title: "Error",
-        description: errorMessage,
+        description: error.response?.data?.error || "Failed to create task. Please try again.",
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (values: FormValues) => {
-    console.log("Submitting values:", values);
-    submitTask(values);
+    // Always ensure a valid priority is set
+    let currentPriority = form.getValues('priority');
+    const validPriorities = Object.values(TaskPriorityEnum).map(String);
+    if (!currentPriority || !validPriorities.includes(String(currentPriority))) {
+      currentPriority = TaskPriorityEnum.MEDIUM;
+      form.setValue('priority', currentPriority);
+      toast({
+        title: 'Warning',
+        description: 'AI could not predict priority. Defaulting to MEDIUM.',
+        variant: 'destructive',
+      });
+    }
+    const submitValues = { ...values, priority: String(currentPriority) };
+    console.log('Submitting values:', submitValues);
+    submitTask(submitValues);
   };
 
   return (
@@ -267,21 +332,27 @@ export default function CreateTaskForm({
             name="priority"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Priority*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select priority" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {Object.values(TaskPriorityEnum).map((priority) => (
-                      <SelectItem key={priority} value={priority}>
-                        {priority}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormLabel>Priority</FormLabel>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-muted/50">
+                    {isPredicting ? (
+                      <>
+                        <Loader className="h-4 w-4 animate-spin" />
+                        <span>Analyzing task...</span>
+                      </>
+                    ) : showPrediction ? (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        <span className="font-medium">{field.value}</span>
+                        <span className="text-sm text-muted-foreground">
+                          (AI Suggested - {Math.round(predictionConfidence! * 100)}% confidence)
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">Enter task details to get priority suggestion</span>
+                    )}
+                  </div>
+                </div>
                 <FormMessage />
               </FormItem>
             )}

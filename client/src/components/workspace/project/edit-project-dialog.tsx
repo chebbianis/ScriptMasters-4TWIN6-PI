@@ -1,5 +1,5 @@
 import { Edit3 } from "lucide-react";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import EditProjectForm from "./editproject";
 import { ProjectType } from "@/types/api.type";
 import { useState } from "react";
@@ -19,7 +19,11 @@ const EditProjectDialog = (props: { project?: ProjectType }) => {
           </button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-lg border-0">
-        <EditProjectForm project={props.project} onClose={onClose} />
+          <DialogTitle>Edit Project</DialogTitle>
+          <DialogDescription>
+            Modify the details below to update your project.
+          </DialogDescription>
+          <EditProjectForm project={props.project} onClose={onClose} />
         </DialogContent>
       </Dialog>
     </div>

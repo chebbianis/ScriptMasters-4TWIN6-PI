@@ -60,8 +60,7 @@ const attachmentSchema = new mongoose.Schema({
 
 const taskSchema = new mongoose.Schema({
     taskCode: {
-        type: String,
-        unique: true
+        type: String
     },
     title: {
         type: String,
@@ -118,6 +117,7 @@ taskSchema.index({ project: 1 });
 taskSchema.index({ assignedTo: 1 });
 taskSchema.index({ status: 1 });
 taskSchema.index({ priority: 1 });
+taskSchema.index({ project: 1, taskCode: 1 }, { unique: true });
 
 const Task = mongoose.model('Task', taskSchema);
 

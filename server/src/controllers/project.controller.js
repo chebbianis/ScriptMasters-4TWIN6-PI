@@ -41,16 +41,27 @@ export const getProjectsInWorkspace = async (req, res) => {
     const { workspaceId } = req.params;
     const { pageSize = 10, pageNumber = 1 } = req.query;
 
+    console.log('getProjectsInWorkspace called with workspaceId:', workspaceId, 'pageSize:', pageSize, 'pageNumber:', pageNumber);
+
     const skip = (parseInt(pageNumber) - 1) * parseInt(pageSize);
     const limit = parseInt(pageSize);
 
+    // Log before querying
+    console.log('Querying Project.find with:', { workspaceId });
+    // const projects = await Project.find({ workspaceId })
+    //   .populate("createdBy", "name profilePicture")
+    //   .sort({ createdAt: -1 })
+    //   .skip(skip)
+    //   .limit(limit);
+    // Remove population for now:
     const projects = await Project.find({ workspaceId })
-      .populate("createdBy", "name profilePicture")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
+    console.log('Projects found:', projects.length);
 
     const totalCount = await Project.countDocuments({ workspaceId });
+    console.log('Total project count:', totalCount);
 
     res.status(200).json({
       success: true,
@@ -63,9 +74,11 @@ export const getProjectsInWorkspace = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error('Error in getProjectsInWorkspace:', error);
     res.status(500).json({
       success: false,
       error: "Erreur serveur lors de la récupération des projets",
+      details: error.message
     });
   }
 };

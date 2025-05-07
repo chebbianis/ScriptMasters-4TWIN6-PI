@@ -6,6 +6,7 @@ import { ResourceType } from '../models/resourceType.model.js';
 
 
 export const createTask = async (req, res) => {
+    console.log('createTask called with body:', req.body);
     try {
         const { title, description, status, priority, dueDate, projectId, assignedTo } = req.body;
 
@@ -31,31 +32,22 @@ export const createTask = async (req, res) => {
             }
         }
 
-        // Generate unique task code with a loop
+        // Robust unique task code generation: find the first available code
         const Task = mongoose.model('Task');
-        let taskCode;
-        let nextNumber = 1; // Start with 1 if no tasks exist
-
-        while (!taskCode) {
-            // Find the highest existing task code for this project
-            const lastTask = await Task.findOne({ project: projectId })
-                .sort({ taskCode: -1 }) // Sort descending by taskCode
-                .select('taskCode');
-
-            if (lastTask && lastTask.taskCode) {
-                const lastNumber = parseInt(lastTask.taskCode.replace('TSK-', ''), 10);
-                nextNumber = lastNumber + 1; // Increment the highest found number
-            }
-
-            const proposedCode = `TSK-${nextNumber.toString().padStart(3, '0')}`;
-            const exists = await Task.exists({ taskCode: proposedCode });
-
-            if (!exists) {
-                taskCode = proposedCode; // Found a unique code, exit the loop
-            } else {
-                nextNumber++; // Increment and keep looping if the code exists
-            }
+        const existingTasks = await Task.find({ project: projectId })
+            .select('taskCode')
+            .sort({ taskCode: 1 });
+        let nextNumber = 1;
+        const usedNumbers = new Set(
+            existingTasks
+                .map(t => t.taskCode)
+                .filter(code => /^TSK-\d+$/.test(code))
+                .map(code => parseInt(code.replace('TSK-', ''), 10))
+        );
+        while (usedNumbers.has(nextNumber)) {
+            nextNumber++;
         }
+        const taskCode = `TSK-${nextNumber.toString().padStart(3, '0')}`;
 
         // Create task with the generated taskCode
         const task = await Task.create({
@@ -80,7 +72,7 @@ export const createTask = async (req, res) => {
             success: true,
             task
         });
-        
+        console.log('createTask success, task created:', task._id);
     } catch (error) {
         console.error('Task creation error:', error);
         if (error.name === 'ValidationError') {
