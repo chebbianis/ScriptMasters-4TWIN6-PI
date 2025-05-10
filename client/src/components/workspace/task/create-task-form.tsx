@@ -18,6 +18,7 @@ import useWorkspaceId from "@/hooks/use-workspace-id";
 import { getProjectNamesQueryFn } from "@/lib/api";
 import TaskAttachments from './task-attachments';
 import { useTaskPriorityPrediction } from "@/hooks/use-task-priority-prediction";
+import TaskPredictionInterface from './TaskPredictionInterface';
 
 // Define the form schema type
 type FormValues = {
@@ -357,6 +358,15 @@ export default function CreateTaskForm({
               </FormItem>
             )}
           />
+
+          {/* Add Task Prediction Interface */}
+          <TaskPredictionInterface
+            description={form.watch("description")}
+            dueDate={form.watch("dueDate")}
+            projectId={form.watch("projectId")}
+            assignedTo={form.watch("assignedTo")}
+          />
+
           <FormField
             control={form.control}
             name="dueDate"
