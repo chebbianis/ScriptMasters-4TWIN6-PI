@@ -19,6 +19,7 @@ import CreateTaskForm from "./create-task-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"; // Updated imports for Dialog
 import Health from "./Health";
 import { BellOff } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 
 const fetchTasks = async ({
@@ -80,19 +81,35 @@ const TaskTable = () => {
   const param = useParams();
   const projectId = param.projectId as string;
   const [tasksWithReminders, setTasksWithReminders] = useState<string[]>([]); 
-
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [tasks, setTasks] = useState<TaskType[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<TaskType | null>(null);
-  const [deletingTask, setDeletingTask] = useState<TaskType | null>(null); // New state for delete confirmation
+  const [deletingTask, setDeletingTask] = useState<TaskType | null>(null);
   const [showHealth, setShowHealth] = useState(false);
-
   const [filters, setFilters] = useTaskTableFilter();
   const workspaceId = useWorkspaceId();
+  const queryClient = useQueryClient();
+
+  // Fetch tasks using React Query
+  const { data: tasksData, isLoading, error } = useQuery({
+    queryKey: ['tasks', workspaceId, projectId, filters, pageNumber, pageSize],
+    queryFn: () => fetchTasks({
+      workspaceId,
+      projectId: projectId || filters.projectId,
+      keyword: filters.keyword,
+      status: filters.status,
+      priority: filters.priority,
+      assignedTo: filters.assigneeId,
+      pageNumber,
+      pageSize,
+    }),
+    enabled: !!workspaceId,
+  });
+
+  const tasks = tasksData?.tasks || [];
+  const totalCount = tasksData?.pagination?.totalCount || 0;
+
+  // Fetch reminder tasks
   useEffect(() => {
     const fetchReminderTasks = async () => {
       try {
@@ -107,68 +124,48 @@ const TaskTable = () => {
   
     fetchReminderTasks();
   }, []);
-  useEffect(() => {
-    const loadTasks = async () => {
-      setIsLoading(true);
-      try {
-        const data = await fetchTasks({
-          workspaceId,
-          projectId: projectId || filters.projectId,
-          keyword: filters.keyword,
-          status: filters.status,
-          priority: filters.priority,
-          assignedTo: filters.assigneeId,
-          pageNumber,
-          pageSize,
-        });
-        setTasks(data.tasks || []);
-        setTotalCount(data.pagination?.totalCount || 0);
-      } catch (err) {
-        setError("Error loading tasks");
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
-    loadTasks();
-  }, [
-    workspaceId,
-    projectId,
-    filters.keyword,
-    filters.status,
-    filters.priority,
-    filters.assigneeId,
-    filters.projectId,
-    pageNumber,
-    pageSize,
-  ]);
-
-  const handleDeleteTask = async (taskId: string) => {
-    try {
+  // Delete task mutation
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
       const response = await fetch(`http://localhost:3000/task/${taskId}`, {
         method: "DELETE",
       });
       if (!response.ok) throw new Error("Failed to delete task");
-      setTasks(tasks.filter(task => task._id !== taskId));
-      setDeletingTask(null); // Close dialog after success
-    } catch (err) {
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      setDeletingTask(null);
+    },
+    onError: (err) => {
       console.error("Failed to delete task:", err);
-      setError("Failed to delete task");
     }
-  };
+  });
 
-  const handleClearReminder = async (taskId: string) => {
-    try {
+  // Clear reminder mutation
+  const clearReminderMutation = useMutation({
+    mutationFn: async (taskId: string) => {
       const response = await fetch(`http://localhost:3000/task/${taskId}/reminder`, {
         method: "DELETE",
       });
       if (!response.ok) throw new Error("Failed to clear reminder");
+      return response.json();
+    },
+    onSuccess: (_, taskId) => {
       setTasksWithReminders(prev => prev.filter(id => id !== taskId));
-    } catch (err) {
+    },
+    onError: (err) => {
       console.error("Failed to clear reminder:", err);
-      setError("Failed to clear reminder");
     }
+  });
+
+  const handleDeleteTask = (taskId: string) => {
+    deleteTaskMutation.mutate(taskId);
+  };
+
+  const handleClearReminder = (taskId: string) => {
+    clearReminderMutation.mutate(taskId);
   };
 
   const handlePageChange = (page: number) => setPageNumber(page);
@@ -178,9 +175,7 @@ const TaskTable = () => {
   };
 
   const handleUpdateSuccess = (updatedTask: TaskType) => {
-    setTasks((prev) =>
-      prev.map((task) => (task._id === updatedTask._id ? updatedTask : task))
-    );
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
     setEditingTask(null);
   };
 
@@ -247,7 +242,7 @@ const TaskTable = () => {
 
   return (
     <div className="w-full relative">
-      {error && <div className="text-red-500 mb-4">{error}</div>}
+      {error && <div className="text-red-500 mb-4">{error.message}</div>}
 
       <DataTable
         isLoading={isLoading}

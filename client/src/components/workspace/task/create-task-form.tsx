@@ -212,7 +212,7 @@ export default function CreateTaskForm({
         description: isEditMode ? "Your task has been updated successfully." : "Your task has been created successfully.",
       });
       // Invalidate tasks query so the table refreshes
-      queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
       if (onSuccess) {
         onSuccess(data.task);
       }
