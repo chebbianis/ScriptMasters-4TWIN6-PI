@@ -8,6 +8,8 @@ import workspaceRoutes from "./routes/workspace.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import predictRoutes from "./routes/predict.routes.js";
 
+console.log("App.js loaded");
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -28,4 +30,5 @@ app.use("/project", projectRoutes);
 app.use("/workspace", workspaceRoutes);
 app.use("/user", userRoutes);
 app.use("/predict",predictRoutes);
+console.log("Predict route registered in app.js");
 export default app;

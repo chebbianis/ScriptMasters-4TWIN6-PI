@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import Health from "./Health";
 import { BellOff } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import TaskQualityPredictor from './TaskQualityPredictor';
 
 
 const fetchTasks = async ({
@@ -86,6 +87,7 @@ const TaskTable = () => {
   const [editingTask, setEditingTask] = useState<TaskType | null>(null);
   const [deletingTask, setDeletingTask] = useState<TaskType | null>(null);
   const [showHealth, setShowHealth] = useState(false);
+  const [showQualityPredictor, setShowQualityPredictor] = useState(false);
   const [filters, setFilters] = useTaskTableFilter();
   const workspaceId = useWorkspaceId();
   const queryClient = useQueryClient();
@@ -262,17 +264,33 @@ const TaskTable = () => {
       />
 
       <div className="mt-6 flex flex-col items-center">
-        <Button
-          variant="outline"
-          className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md hover:from-blue-600 hover:to-indigo-700 transition-all duration-300"
-          onClick={() => setShowHealth(!showHealth)}
-        >
-          {showHealth ? "Hide Workspace Health" : "Workspace Health"}
-        </Button>
+        <div className="flex flex-row gap-4">
+          <Button
+            variant="outline"
+            className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md hover:from-blue-600 hover:to-indigo-700 transition-all duration-300"
+            onClick={() => setShowHealth(!showHealth)}
+          >
+            {showHealth ? "Hide Workspace Health" : "Workspace Health"}
+          </Button>
+          <Button
+            variant="outline"
+            className="bg-gradient-to-r from-green-500 to-teal-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md hover:from-green-600 hover:to-teal-700 transition-all duration-300"
+            onClick={() => setShowQualityPredictor(true)}
+          >
+            Predict Task Quality
+          </Button>
+        </div>
         {showHealth && (
           <div className="mt-4 w-full max-w-4xl bg-white p-6 rounded-xl shadow-lg border border-gray-200">
             <Health />
           </div>
+        )}
+        {showQualityPredictor && (
+          <Dialog open onOpenChange={() => setShowQualityPredictor(false)}>
+            <DialogContent className="max-w-lg">
+              <TaskQualityPredictor />
+            </DialogContent>
+          </Dialog>
         )}
       </div>
 

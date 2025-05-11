@@ -82,6 +82,7 @@ export default function CreateTaskForm({
   const [predictionConfidence, setPredictionConfidence] = useState<number | null>(null);
   const [predictionFailed, setPredictionFailed] = useState(false);
   const queryClient = useQueryClient();
+  const [manualPredictionLoading, setManualPredictionLoading] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -115,56 +116,44 @@ export default function CreateTaskForm({
   const dueDate = form.watch("dueDate");
   const projectId = form.watch("projectId");
 
-  useEffect(() => {
-    const predictTaskPriority = async () => {
-      if (!description || !projectId) {
-        setShowPrediction(false);
-        setPredictionFailed(false);
-        return;
-      }
-      const daysUntilDue = dueDate 
-        ? Math.ceil((new Date(dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-        : 0;
-      const features = {
-        descriptionLength: description.length,
-        hasDueDate: !!dueDate,
-        daysUntilDue,
-        assignedToWorkload: 1,
-        projectProgress: 0.5,
-        taskDependencies: 0,
-      };
-      try {
-        predictPriority(features, {
-          onSuccess: (data) => {
-            console.log('Prediction API success:', data);
-            if (data.status === 'success') {
-              form.setValue('priority', data.priority);
-              setPredictionConfidence(data.confidence);
-              setShowPrediction(true);
-              setPredictionFailed(false);
-            } else {
-              form.setValue('priority', TaskPriorityEnum.MEDIUM);
-              setShowPrediction(false);
-              setPredictionFailed(true);
-            }
-          },
-          onError: (error) => {
-            console.error('Prediction API error:', error);
-            form.setValue('priority', TaskPriorityEnum.MEDIUM);
-            setShowPrediction(false);
-            setPredictionFailed(true);
-          }
-        });
-      } catch (error) {
-        console.error('Prediction error:', error);
+  const handleManualPrediction = () => {
+    setManualPredictionLoading(true);
+    const description = form.getValues('description');
+    const dueDate = form.getValues('dueDate');
+    const projectId = form.getValues('projectId');
+    const daysUntilDue = dueDate 
+      ? Math.ceil((new Date(dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+    const features = {
+      descriptionLength: description ? description.length : 0,
+      hasDueDate: !!dueDate,
+      daysUntilDue,
+      assignedToWorkload: 1,
+      projectProgress: 0.5,
+      taskDependencies: 0,
+    };
+    predictPriority(features, {
+      onSuccess: (data) => {
+        if (data.status === 'success') {
+          form.setValue('priority', data.priority);
+          setPredictionConfidence(data.confidence);
+          setShowPrediction(true);
+          setPredictionFailed(false);
+        } else {
+          form.setValue('priority', TaskPriorityEnum.MEDIUM);
+          setShowPrediction(false);
+          setPredictionFailed(true);
+        }
+        setManualPredictionLoading(false);
+      },
+      onError: (error) => {
         form.setValue('priority', TaskPriorityEnum.MEDIUM);
         setShowPrediction(false);
         setPredictionFailed(true);
+        setManualPredictionLoading(false);
       }
-    };
-    const debounceTimer = setTimeout(predictTaskPriority, 1000);
-    return () => clearTimeout(debounceTimer);
-  }, [description, dueDate, projectId, predictPriority, form]);
+    });
+  };
 
   // Fetch tasks and extract unique projects
   const { data: projectsData, isLoading: isProjectsLoading } = useQuery({
@@ -336,7 +325,7 @@ export default function CreateTaskForm({
                 <FormLabel>Priority</FormLabel>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-muted/50">
-                    {isPredicting ? (
+                    {isPredicting || manualPredictionLoading ? (
                       <>
                         <Loader className="h-4 w-4 animate-spin" />
                         <span>Analyzing task...</span>
@@ -353,6 +342,9 @@ export default function CreateTaskForm({
                       <span className="text-muted-foreground">Enter task details to get priority suggestion</span>
                     )}
                   </div>
+                  <Button type="button" variant="secondary" onClick={handleManualPrediction} disabled={manualPredictionLoading || isPredicting}>
+                    {manualPredictionLoading || isPredicting ? <Loader className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Predict with AI
+                  </Button>
                 </div>
                 <FormMessage />
               </FormItem>
