@@ -62,6 +62,9 @@ export const createTask = async (req, res) => {
             createdBy: req.body.createdBy
         });
 
+        // Log the created task for debugging
+        console.log('Created task with priority:', task.priority);
+
         // Populate references
         await task.populate([
             { path: 'project', select: 'name emoji' },

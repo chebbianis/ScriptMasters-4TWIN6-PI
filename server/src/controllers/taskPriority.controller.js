@@ -50,7 +50,7 @@ export const predictTaskPriority = async (req, res) => {
                 try {
                     const result = JSON.parse(pyData);
                     res.json({
-                        priority: result.prediction,
+                        priority: result.prediction.toUpperCase(),
                         confidence: result.confidence,
                         status: 'success',
                         source: 'ml-model'
@@ -95,8 +95,8 @@ export const predictTaskPriority = async (req, res) => {
                 confidence = Math.max(confidence, 0.65);
             }
             res.json({
-                priority,
-                confidence,
+                priority: priority,
+                confidence: confidence,
                 status: 'success',
                 source: 'rule-based',
                 error: pyErr || 'Fallback: Error occurred, returning default priority.'

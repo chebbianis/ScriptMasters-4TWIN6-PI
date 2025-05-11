@@ -129,7 +129,9 @@ router.use("/project", projectRoutes);
 router.use("/api/task", taskRoutes);
 router.use("/task", taskRoutes);
 router.use("/notifications", notificationRoutes);
-router.use("/api", predictRoutes);
+
+// Mount predict routes directly on the app to avoid double prefixing
+app.use("/api", predictRoutes);
 // Mount auth routes directly on the app to avoid double prefixing
 app.use("/api/auth", authRoutes);
 

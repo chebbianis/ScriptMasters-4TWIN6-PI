@@ -7,6 +7,10 @@ import {
 } from "../controllers/taskPriority.controller.js";
 import { spawn } from 'child_process';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
@@ -24,7 +28,8 @@ router.get('/test', (req, res) => {
 });
 
 // POST /predict (for ML model)
-router.post('/', (req, res) => {
+router.post('/predict', (req, res) => {
+  console.log('Received /predict POST with body:', req.body);
   const scriptPath = path.resolve(__dirname, '../ml/predict.py');
   const py = spawn('python3', [scriptPath]);
   let pyData = '';
@@ -40,6 +45,9 @@ router.post('/', (req, res) => {
     pyErr += data.toString();
   });
   py.on('close', (code) => {
+    console.log('Python process closed with code:', code);
+    console.log('Python stdout:', pyData);
+    console.log('Python stderr:', pyErr);
     if (code === 0 && pyData) {
       try {
         const result = JSON.parse(pyData);
@@ -48,9 +56,14 @@ router.post('/', (req, res) => {
         res.status(500).json({ error: 'Python returned invalid JSON', details: pyData });
       }
     } else {
-      res.status(500).json({ error: pyErr || 'Prediction failed' });
+      res.status(500).json({ error: pyErr || 'Prediction failed', details: pyData });
     }
   });
+});
+
+// Test POST route for debugging
+router.post('/predict/test', (req, res) => {
+  res.json({ message: "Test route works!" });
 });
 
 export default router;

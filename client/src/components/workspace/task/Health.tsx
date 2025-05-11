@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { Line, Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend } from 'chart.js';
@@ -205,6 +203,12 @@ const Health: React.FC = () => {
       title: { display: true, text: 'Task Priority Over Time' },
     },
   };
+
+  // Calculate workspace-wide totals by summing all projects
+  const totalTasks = bottleneckData?.projects?.reduce((sum, p) => sum + (p.counts.total || 0), 0) || 0;
+  const totalHighPriority = bottleneckData?.projects?.reduce((sum, p) => sum + (p.counts.highPriority || 0), 0) || 0;
+  const totalInProgress = bottleneckData?.projects?.reduce((sum, p) => sum + (p.counts.inProgress || 0), 0) || 0;
+  const totalDone = bottleneckData?.projects?.reduce((sum, p) => sum + (p.counts.done || 0), 0) || 0;
 
   return (
     <div className="space-y-6">

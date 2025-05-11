@@ -116,44 +116,43 @@ export default function CreateTaskForm({
   const dueDate = form.watch("dueDate");
   const projectId = form.watch("projectId");
 
-  const handleManualPrediction = () => {
-    setManualPredictionLoading(true);
-    const description = form.getValues('description');
-    const dueDate = form.getValues('dueDate');
-    const projectId = form.getValues('projectId');
-    const daysUntilDue = dueDate 
-      ? Math.ceil((new Date(dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-      : 0;
-    const features = {
-      descriptionLength: description ? description.length : 0,
-      hasDueDate: !!dueDate,
-      daysUntilDue,
-      assignedToWorkload: 1,
-      projectProgress: 0.5,
-      taskDependencies: 0,
-    };
-    predictPriority(features, {
-      onSuccess: (data) => {
-        if (data.status === 'success') {
-          form.setValue('priority', data.priority);
-          setPredictionConfidence(data.confidence);
-          setShowPrediction(true);
-          setPredictionFailed(false);
-        } else {
+  // Automatically trigger AI prediction when relevant fields change
+  useEffect(() => {
+    if (description && dueDate && projectId) {
+      const daysUntilDue = dueDate 
+        ? Math.ceil((new Date(dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+      const features = {
+        descriptionLength: description.length,
+        hasDueDate: !!dueDate,
+        daysUntilDue,
+        assignedToWorkload: 1,
+        projectProgress: 0.5,
+        taskDependencies: 0,
+      };
+      predictPriority(features, {
+        onSuccess: (data) => {
+          if (data.status === 'success') {
+            const predictedPriority = data.priority.toUpperCase();
+            form.setValue('priority', predictedPriority);
+            setPredictionConfidence(data.confidence);
+            setShowPrediction(true);
+            setPredictionFailed(false);
+          } else {
+            form.setValue('priority', TaskPriorityEnum.MEDIUM);
+            setShowPrediction(false);
+            setPredictionFailed(true);
+          }
+        },
+        onError: () => {
           form.setValue('priority', TaskPriorityEnum.MEDIUM);
           setShowPrediction(false);
           setPredictionFailed(true);
         }
-        setManualPredictionLoading(false);
-      },
-      onError: (error) => {
-        form.setValue('priority', TaskPriorityEnum.MEDIUM);
-        setShowPrediction(false);
-        setPredictionFailed(true);
-        setManualPredictionLoading(false);
-      }
-    });
-  };
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [description, dueDate, projectId]);
 
   // Fetch tasks and extract unique projects
   const { data: projectsData, isLoading: isProjectsLoading } = useQuery({
@@ -201,8 +200,8 @@ export default function CreateTaskForm({
         title: isEditMode ? "Task updated" : "Task created",
         description: isEditMode ? "Your task has been updated successfully." : "Your task has been created successfully.",
       });
-      // Invalidate tasks query so the table refreshes
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      // Invalidate all queries so the table refreshes
+      queryClient.invalidateQueries();
       if (onSuccess) {
         onSuccess(data.task);
       }
@@ -221,20 +220,16 @@ export default function CreateTaskForm({
   });
 
   const onSubmit = (values: FormValues) => {
-    // Always ensure a valid priority is set
-    let currentPriority = form.getValues('priority');
-    const validPriorities = Object.values(TaskPriorityEnum).map(String);
-    if (!currentPriority || !validPriorities.includes(String(currentPriority))) {
-      currentPriority = TaskPriorityEnum.MEDIUM;
-      form.setValue('priority', currentPriority);
-      toast({
-        title: 'Warning',
-        description: 'AI could not predict priority. Defaulting to MEDIUM.',
-        variant: 'destructive',
-      });
-    }
-    const submitValues = { ...values, priority: String(currentPriority) };
-    console.log('Submitting values:', submitValues);
+    // Get the current priority from the form
+    const currentPriority = form.getValues('priority');
+    
+    // Ensure we're using the predicted priority if available
+    const submitValues = {
+      ...values,
+      priority: currentPriority || TaskPriorityEnum.MEDIUM
+    };
+
+    console.log('Submitting task with priority:', submitValues.priority);
     submitTask(submitValues);
   };
 
@@ -342,9 +337,6 @@ export default function CreateTaskForm({
                       <span className="text-muted-foreground">Enter task details to get priority suggestion</span>
                     )}
                   </div>
-                  <Button type="button" variant="secondary" onClick={handleManualPrediction} disabled={manualPredictionLoading || isPredicting}>
-                    {manualPredictionLoading || isPredicting ? <Loader className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Predict with AI
-                  </Button>
                 </div>
                 <FormMessage />
               </FormItem>

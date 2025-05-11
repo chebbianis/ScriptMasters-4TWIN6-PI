@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Info, CircleAlert } from 'lucide-react';
 
 const defaultForm = {
   Category: '',
@@ -35,6 +37,7 @@ const TaskQualityPredictor: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ prediction: string; confidence: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showExplanation, setShowExplanation] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -63,7 +66,7 @@ const TaskQualityPredictor: React.FC = () => {
     }
 
     try {
-      const response = await fetch('/predict', {
+      const response = await fetch('/api/predict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -89,6 +92,28 @@ const TaskQualityPredictor: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Helper to generate a human-readable explanation
+  function getPredictionExplanation(form: typeof defaultForm, result: { prediction: string; confidence: number } | null) {
+    if (!result) return '';
+    const reasons = [];
+    if (Number(form.CompletionPercentage) < 0.3) {
+      reasons.push('the completion percentage is low');
+    }
+    if (Number(form.EstimatedTime) > 60) {
+      reasons.push('the estimated time is high');
+    }
+    if (form.Priority.toLowerCase() === 'high') {
+      reasons.push('the task priority is high');
+    }
+    if (form.Status.toLowerCase() === 'under') {
+      reasons.push('the status is "Under"');
+    }
+    if (reasons.length === 0) {
+      return `The AI predicted the quality as ${result.prediction} based on the provided task details.`;
+    }
+    return `The AI predicted the quality as ${result.prediction} because ${reasons.join(' and ')}.`;
+  }
 
   return (
     <div className="w-full max-w-md mx-auto p-4">
@@ -149,6 +174,35 @@ const TaskQualityPredictor: React.FC = () => {
           <h4 className="font-bold text-indigo-700 mb-2">Prediction Result</h4>
           <p className="mb-1"><strong>Quality:</strong> {result.prediction}</p>
           <p className="mb-0"><strong>Confidence:</strong> {(result.confidence * 100).toFixed(2)}%</p>
+          <Button className="mt-3" variant="outline" onClick={() => setShowExplanation(true)}>
+            Explain Prediction
+          </Button>
+          <Dialog open={showExplanation} onOpenChange={setShowExplanation}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Prediction Explanation</DialogTitle>
+                <DialogDescription>
+                  <div className="flex items-start gap-3 p-4 mb-3 rounded-lg bg-blue-50 border-l-4 border-blue-400 shadow-sm">
+                    <CircleAlert className="h-6 w-6 text-blue-500 mt-1" />
+                    <div>
+                      <span className="block text-lg font-semibold text-blue-900 mb-1">Explanation</span>
+                      <span className="text-base font-medium text-blue-800">{getPredictionExplanation(form, result)}</span>
+                    </div>
+                  </div>
+                </DialogDescription>
+              </DialogHeader>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Category:</strong> {form.Category}</li>
+                <li><strong>Action:</strong> {form.Action}</li>
+                <li><strong>Priority:</strong> {form.Priority}</li>
+                <li><strong>Estimated Time:</strong> {form.EstimatedTime}</li>
+                <li><strong>Actual Time:</strong> {form.ActualTime}</li>
+                <li><strong>Completion Percentage:</strong> {form.CompletionPercentage}</li>
+                <li><strong>Time Spent:</strong> {form.TimeSpent}</li>
+                <li><strong>Status:</strong> {form.Status}</li>
+              </ul>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
       {error && <div className="mt-4 text-red-600">{error}</div>}

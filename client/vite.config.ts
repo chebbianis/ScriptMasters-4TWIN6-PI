@@ -12,13 +12,8 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://backend:3000", // Utilisation du nom du service Docker
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, "")
-      },
-      "/predict": {
         target: "http://localhost:3000",
-        changeOrigin: true,
+        changeOrigin: true
       }
     },
     host: true, // Écoute sur toutes les interfaces

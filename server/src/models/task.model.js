@@ -13,6 +13,9 @@ export const TaskPriority = {
     HIGH: 'HIGH'
 };
 
+// Ensure the enum values are properly exported
+export const TaskPriorityEnum = Object.values(TaskPriority);
+
 // Définir les types de ressources
 export const ResourceType = {
     FILE: 'FILE',

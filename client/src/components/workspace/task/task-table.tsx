@@ -53,7 +53,7 @@ const fetchTasks = async ({
     pageSize: pageSize.toString(),
   });
 
-  const response = await fetch(`http://localhost:3000/task/all?${queryParams}`);
+  const response = await fetch(`/api/task/all?${queryParams}`);
   if (!response.ok) throw new Error("Failed to fetch tasks");
   return response.json();
 };
@@ -288,6 +288,10 @@ const TaskTable = () => {
         {showQualityPredictor && (
           <Dialog open onOpenChange={() => setShowQualityPredictor(false)}>
             <DialogContent className="max-w-lg">
+              <DialogTitle>Task Quality Predictor</DialogTitle>
+              <DialogDescription>
+                Predict the quality of your task with confidence
+              </DialogDescription>
               <TaskQualityPredictor />
             </DialogContent>
           </Dialog>
