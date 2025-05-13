@@ -37,9 +37,9 @@ const Settings = () => {
 
           <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList className="mb-4">
-              <TabsTrigger value="general">Général</TabsTrigger>
+              <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="members">Membres</TabsTrigger>
-              <TabsTrigger value="advanced">Avancé</TabsTrigger>
+              <TabsTrigger value="advanced">Advanced</TabsTrigger>
             </TabsList>
             <TabsContent value="general">
               <GeneralSettings />
@@ -49,12 +49,6 @@ const Settings = () => {
             </TabsContent>
             <TabsContent value="advanced">
               <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium">Paramètres avancés</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Gérez les paramètres avancés de votre workspace, comme la suppression.
-                  </p>
-                </div>
                 <div className="space-y-4 border-t pt-4">
                   <DeleteWorkspaceCard />
                 </div>

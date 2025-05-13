@@ -18,6 +18,8 @@ import passport from "./src/config/passport.js";
 import notificationRoutes from "./src/routes/notificationroutes.js";
 import predictRoutes from "./src/routes/predict.routes.js";
 import session from "express-session";
+import { initializeDeveloperSkills } from './src/controllers/user.controller.js';
+import { initializeModelFiles } from './src/ml/initialize_model.js';
 
 // Configuration des paths
 const __filename = fileURLToPath(import.meta.url);
@@ -25,6 +27,9 @@ const __dirname = path.dirname(__filename);
 
 // Chargement des variables d'environnement
 dotenv.config();
+
+// Définition du port
+const port = process.env.PORT || 3000;
 
 // Vérification des variables obligatoires
 const requiredEnvVars = [
@@ -50,7 +55,6 @@ requiredEnvVars.forEach((varName) => {
 });
 
 const app = express();
-const port = 3000;
 
 // Configuration de base
 app.use(express.json());
@@ -93,18 +97,25 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Initialisation de la base de données
-initializeDatabase().then(() => {
-  console.log("Database initialization complete");
-});
+// Création du serveur HTTP
+const httpServer = http.createServer(app);
 
 // Configuration WebSocket
-const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "*",
+    origin: ["http://localhost:5173", "http://localhost:3000"],
     methods: ["GET", "POST"],
+    credentials: true
   },
+});
+
+// Connexion Socket.IO
+io.on('connection', (socket) => {
+  console.log('Nouvelle connexion Socket.IO:', socket.id);
+
+  socket.on('disconnect', () => {
+    console.log('Connexion fermée:', socket.id);
+  });
 });
 
 // Routes principales
@@ -129,9 +140,7 @@ router.use("/project", projectRoutes);
 router.use("/api/task", taskRoutes);
 router.use("/task", taskRoutes);
 router.use("/notifications", notificationRoutes);
-
-// Mount predict routes directly on the app to avoid double prefixing
-app.use("/api", predictRoutes);
+router.use("/api", predictRoutes);
 // Mount auth routes directly on the app to avoid double prefixing
 app.use("/api/auth", authRoutes);
 
@@ -169,13 +178,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Something broke!" });
 });
 
-// Démarrage du serveur
-const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
-  console.log(`API disponible sur http://localhost:${PORT}/api`);
-});
-
 // Gestion des erreurs globales
 process.on("unhandledRejection", (reason, promise) => {
   console.error("Unhandled Rejection at:", promise, "reason:", reason);
@@ -185,3 +187,24 @@ process.on("uncaughtException", (error) => {
   console.error("Uncaught Exception:", error);
   process.exit(1);
 });
+
+// Initialisation de la base de données
+const startServer = async () => {
+  try {
+    await initializeDatabase();
+    await initializeDeveloperSkills();
+    await initializeModelFiles();
+
+    // Démarrer le serveur HTTP (qui inclut Express et Socket.IO)
+    httpServer.listen(port, () => {
+      console.log(`🚀 Serveur démarré sur http://localhost:${port}`);
+      console.log(`API disponible sur http://localhost:${port}/api`);
+      console.log(`Socket.IO disponible sur ws://localhost:${port}`);
+    });
+  } catch (error) {
+    console.error('Error starting server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();

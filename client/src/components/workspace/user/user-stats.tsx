@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Définir les rôles spécifiques à votre système
+// Define specific roles for your system
 const ROLES = ["ADMIN", "PROJECT_MANAGER", "DEVELOPER"] as const;
 type Role = (typeof ROLES)[number];
 
@@ -31,7 +31,7 @@ interface Stats {
     recentLogins: UserLogin[];
 }
 
-// Couleurs spécifiques pour chaque rôle
+// Specific colors for each role
 const roleColors: Record<Role, { bg: string, text: string, border: string }> = {
     ADMIN: { bg: "bg-green-100", text: "text-green-800", border: "border-green-300" },
     PROJECT_MANAGER: { bg: "bg-blue-100", text: "text-blue-800", border: "border-blue-300" },
@@ -39,7 +39,7 @@ const roleColors: Record<Role, { bg: string, text: string, border: string }> = {
 };
 
 const UserStats = () => {
-    // Récupérer les données réelles depuis l'API
+    // Retrieve actual data from API
     const { data, isLoading, error } = useQuery({
         queryKey: ["userStats"],
         queryFn: getUserStatsQueryFn
@@ -56,17 +56,17 @@ const UserStats = () => {
     if (error) {
         return (
             <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-                <p className="text-red-500">Erreur lors du chargement des statistiques</p>
+                <p className="text-red-500">Error loading statistics</p>
             </div>
         );
     }
 
-    // Valider et transformer les données reçues de l'API
+    // Validate and transform data received from API
     const validateRole = (role: string): Role => {
         if (ROLES.includes(role as Role)) {
             return role as Role;
         }
-        return "DEVELOPER"; // Rôle par défaut si invalide
+        return "DEVELOPER"; // Default role if invalid
     };
 
     const transformedData: Stats = {
@@ -82,16 +82,16 @@ const UserStats = () => {
         }))
     };
 
-    // Calculer le rôle le plus actif dynamiquement
+    // Calculate the most active role dynamically
     const mostActiveRole = Object.entries(transformedData.roleStats).reduce(
         (max, [role, data]) => (data.active > max.active ? { role, active: data.active } : max),
         { role: "", active: 0 }
     );
 
-    // Formater la durée depuis la dernière connexion
+    // Format time since last login
     const formatLastLogin = (dateString: string) => {
         const date = new Date(dateString);
-        return new Intl.DateTimeFormat('fr-FR', {
+        return new Intl.DateTimeFormat('en-US', {
             day: 'numeric',
             month: 'short',
             hour: '2-digit',
@@ -99,18 +99,18 @@ const UserStats = () => {
         }).format(date);
     };
 
-    // Calculer les taux d'activité
+    // Calculate activity rates
     const calculateActiveRate = (role: Role) => {
         const stats = transformedData.roleStats[role];
         return stats.count > 0 ? Math.round((stats.active / stats.count) * 100) : 0;
     };
 
-    // Calculer le pourcentage d'utilisateurs actifs aujourd'hui
+    // Calculate percentage of active users today
     const activeRate = transformedData.totalUsers > 0
         ? Math.round((transformedData.activeToday / transformedData.totalUsers) * 100)
         : 0;
 
-    // Animation variants pour Framer Motion
+    // Animation variants for Framer Motion
     const containerVariants = {
         hidden: { opacity: 0 },
         show: {
@@ -128,36 +128,36 @@ const UserStats = () => {
 
     return (
         <div className="space-y-8">
-            {/* En-tête avec statistiques globales */}
+            {/* Header with global statistics */}
             <motion.div
                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
                 variants={containerVariants}
                 initial="hidden"
                 animate="show"
             >
-                {/* Total utilisateurs */}
+                {/* Total users */}
                 <motion.div variants={itemVariants}>
                     <Card className="overflow-hidden border-t-4 border-t-blue-500 shadow-md hover:shadow-lg transition-shadow">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-gray-500 flex items-center">
                                 <Users className="h-4 w-4 mr-2 text-blue-500" />
-                                Total Utilisateurs
+                                Total Users
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-3xl font-bold text-gray-800">{transformedData.totalUsers}</div>
-                            <p className="text-xs text-gray-500 mt-1">Tous comptes confondus</p>
+                            <p className="text-xs text-gray-500 mt-1">All accounts combined</p>
                         </CardContent>
                     </Card>
                 </motion.div>
 
-                {/* Utilisateurs actifs aujourd'hui */}
+                {/* Active users today */}
                 <motion.div variants={itemVariants}>
                     <Card className="overflow-hidden border-t-4 border-t-green-500 shadow-md hover:shadow-lg transition-shadow">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-gray-500 flex items-center">
                                 <UserCheck className="h-4 w-4 mr-2 text-green-500" />
-                                Actifs Aujourd'hui
+                                Active Today
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -172,67 +172,67 @@ const UserStats = () => {
                     </Card>
                 </motion.div>
 
-                {/* Rôle le plus actif */}
+                {/* Most active role */}
                 <motion.div variants={itemVariants}>
                     <Card className="overflow-hidden border-t-4 border-t-purple-500 shadow-md hover:shadow-lg transition-shadow">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-gray-500 flex items-center">
                                 <Activity className="h-4 w-4 mr-2 text-purple-500" />
-                                Rôle le Plus Actif
+                                Most Active Role
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-3xl font-bold text-gray-800">
-                                {mostActiveRole.role || "Aucun"}
+                                {mostActiveRole.role || "None"}
                             </div>
                             <div className="flex items-center mt-1">
                                 <span className="text-xs text-gray-500">
-                                    {mostActiveRole.active} utilisateurs actifs
+                                    {mostActiveRole.active} active users
                                 </span>
                             </div>
                         </CardContent>
                     </Card>
                 </motion.div>
 
-                {/* Dernière activité */}
+                {/* Last activity */}
                 <motion.div variants={itemVariants}>
                     <Card className="overflow-hidden border-t-4 border-t-amber-500 shadow-md hover:shadow-lg transition-shadow">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-gray-500 flex items-center">
                                 <Clock className="h-4 w-4 mr-2 text-amber-500" />
-                                Dernière Activité
+                                Last Activity
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-3xl font-bold text-gray-800">
                                 {transformedData.recentLogins.length > 0 ?
                                     formatLastLogin(transformedData.recentLogins[0].lastLogin) :
-                                    "Aucune"}
+                                    "None"}
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">Dernière connexion enregistrée</p>
+                            <p className="text-xs text-gray-500 mt-1">Last recorded login</p>
                         </CardContent>
                     </Card>
                 </motion.div>
             </motion.div>
 
-            {/* Onglets pour les différentes vues */}
+            {/* Tabs for different views */}
             <Tabs defaultValue="activity" className="w-full">
                 <TabsList className="grid grid-cols-2 mb-4">
                     <TabsTrigger value="activity" className="data-[state=active]:bg-blue-50">
                         <BarChart className="w-4 h-4 mr-2" />
-                        Activité par rôle
+                        Activity by role
                     </TabsTrigger>
                     <TabsTrigger value="recent" className="data-[state=active]:bg-blue-50">
                         <Clock className="w-4 h-4 mr-2" />
-                        Connexions récentes
+                        Recent logins
                     </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="activity" className="mt-0">
                     <Card className="border shadow-md">
                         <CardHeader>
-                            <CardTitle className="text-xl font-semibold text-gray-700">Activité par rôle</CardTitle>
-                            <CardDescription>Distribution des utilisateurs par rôle et taux d'activité</CardDescription>
+                            <CardTitle className="text-xl font-semibold text-gray-700">Activity by role</CardTitle>
+                            <CardDescription>Distribution of users by role and activity rate</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-6">
@@ -257,12 +257,12 @@ const UserStats = () => {
                                                     </h3>
                                                 </div>
                                                 <div className="text-sm font-medium">
-                                                    {activeRate}% actifs
+                                                    {activeRate}% active
                                                 </div>
                                             </div>
                                             <div className="flex items-center justify-between text-sm mb-2">
                                                 <span>Total: {stats.count}</span>
-                                                <span>Actifs: {stats.active}</span>
+                                                <span>Active: {stats.active}</span>
                                             </div>
                                             <Progress
                                                 value={activeRate}
@@ -279,8 +279,8 @@ const UserStats = () => {
                 <TabsContent value="recent" className="mt-0">
                     <Card className="border shadow-md">
                         <CardHeader>
-                            <CardTitle className="text-xl font-semibold text-gray-700">Connexions récentes</CardTitle>
-                            <CardDescription>Les 10 derniers utilisateurs connectés</CardDescription>
+                            <CardTitle className="text-xl font-semibold text-gray-700">Recent logins</CardTitle>
+                            <CardDescription>The 10 most recent logged-in users</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
@@ -318,7 +318,7 @@ const UserStats = () => {
                                 ) : (
                                     <div className="text-center py-8 text-gray-500">
                                         <Clock className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                                        <p>Aucune connexion récente</p>
+                                        <p>No recent logins</p>
                                     </div>
                                 )}
                             </div>

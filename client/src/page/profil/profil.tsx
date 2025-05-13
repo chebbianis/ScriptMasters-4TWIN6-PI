@@ -1,12 +1,11 @@
 import { useState, useEffect, FormEvent } from "react";
 import { useAuthContext } from "@/context/auth-provider";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Camera } from "lucide-react";
 import { updateProfileMutationFn, updatePasswordMutationFn } from "@/lib/api";
 
 const Profile = () => {
@@ -25,7 +24,7 @@ const Profile = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
-  
+
 
 
   useEffect(() => {
@@ -44,27 +43,27 @@ const Profile = () => {
     e.preventDefault();
     setProfileError("");
     setProfileSuccess("");
-    
+
     try {
-      if (!user?.email) throw new Error("Utilisateur non authentifié");
-  
+      if (!user?.email) throw new Error("User not authenticated");
+
       const backendData = {
         currentEmail: user.email,
         name: formData.name,
         newEmail: formData.email
       };
-  
+
       const updatedUser = await updateProfileMutationFn(backendData);
-  
+
       if (!updatedUser?.id) {
-        throw new Error("Erreur lors de la mise à jour du profil");
+        throw new Error("Error updating profile");
       }
 
       updateUser(updatedUser);
-      setProfileSuccess("Profil mis à jour avec succès");
+      setProfileSuccess("Profile updated successfully");
       setIsEditing(false);
     } catch (error: any) {
-      console.error("Erreur mise à jour profil :", error);
+      console.error("Profile update error:", error);
       setProfileError(error.message);
     }
   };
@@ -75,11 +74,11 @@ const Profile = () => {
     setPasswordSuccess("");
 
     if (newPassword !== confirmPassword) {
-      setPasswordError("Les mots de passe ne correspondent pas.");
+      setPasswordError("Passwords do not match.");
       return;
     }
     if (!user?.email) {
-      setPasswordError("Email non défini.");
+      setPasswordError("Email not defined.");
       return;
     }
 
@@ -95,9 +94,9 @@ const Profile = () => {
       setNewPassword("");
       setConfirmPassword("");
     } catch (error: any) {
-      console.error("Erreur mot de passe:", error);
+      console.error("Password error:", error);
       setPasswordError(
-        error.response?.data?.error || "Erreur mise à jour mot de passe"
+        error.response?.data?.error || "Error updating password"
       );
     }
   };
@@ -106,7 +105,7 @@ const Profile = () => {
     if (!user) return "U";
     const nameParts = user.name?.split(" ") || [];
     return (
-      (nameParts[0]?.[0] || user.email[0] || "U") + 
+      (nameParts[0]?.[0] || user.email[0] || "U") +
       (nameParts[1]?.[0] || "")
     ).toUpperCase();
   };
@@ -116,17 +115,17 @@ const Profile = () => {
       <Card className="border border-gray-200 shadow-sm">
         <CardHeader className="pb-4 pt-6">
           <CardTitle className="text-2xl font-bold text-center">
-            {isEditing ? "Modifier votre profil" : "Profil utilisateur"}
+            {isEditing ? "Edit Profile" : "User Profile"}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="info" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value="info">Informations</TabsTrigger>
-              <TabsTrigger value="security">Sécurité</TabsTrigger>
+              <TabsTrigger value="info">Information</TabsTrigger>
+              <TabsTrigger value="security">Security</TabsTrigger>
             </TabsList>
 
-            {/* Onglet Informations */}
+            {/* Information Tab */}
             <TabsContent value="info" className="space-y-8">
               <div className="flex flex-col md:flex-row gap-8 items-center">
                 <div className="relative group">
@@ -141,7 +140,7 @@ const Profile = () => {
                   {isEditing ? (
                     <form onSubmit={handleSave} className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="name">Nom complet</Label>
+                        <Label htmlFor="name">Full Name</Label>
                         <Input
                           id="name"
                           value={formData.name}
@@ -167,14 +166,14 @@ const Profile = () => {
                       )}
                       <div className="flex gap-3 pt-4">
                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                          Enregistrer
+                          Save
                         </Button>
                         <Button
                           type="button"
                           variant="outline"
                           onClick={() => setIsEditing(false)}
                         >
-                          Annuler
+                          Cancel
                         </Button>
                       </div>
                     </form>
@@ -182,7 +181,7 @@ const Profile = () => {
                     <div className="space-y-6">
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                          <h3 className="text-sm font-medium text-gray-500">Nom</h3>
+                          <h3 className="text-sm font-medium text-gray-500">Name</h3>
                           <p className="mt-1 text-base font-medium">{user?.name}</p>
                         </div>
                         <div>
@@ -190,12 +189,12 @@ const Profile = () => {
                           <p className="mt-1 text-base">{user?.email}</p>
                         </div>
                         <div>
-                          <h3 className="text-sm font-medium text-gray-500">Rôle</h3>
+                          <h3 className="text-sm font-medium text-gray-500">Role</h3>
                           <p className="mt-1 text-base">{user?.role}</p>
                         </div>
                         <div>
                           <h3 className="text-sm font-medium text-gray-500">
-                            Membre depuis
+                            Member since
                           </h3>
                           <p className="mt-1 text-base">
                             {new Date(user?.createdAt || "").toLocaleDateString()}
@@ -206,7 +205,7 @@ const Profile = () => {
                         onClick={() => setIsEditing(true)}
                         className="mt-6 bg-blue-600 hover:bg-blue-700"
                       >
-                        Modifier le profil
+                        Edit Profile
                       </Button>
                     </div>
                   )}
@@ -214,16 +213,16 @@ const Profile = () => {
               </div>
             </TabsContent>
 
-            {/* Onglet Sécurité */}
+            {/* Security Tab */}
             <TabsContent value="security" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Changer le mot de passe</CardTitle>
+                  <CardTitle className="text-lg">Change Password</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handlePasswordUpdate} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="currentPassword">Mot de passe actuel</Label>
+                      <Label htmlFor="currentPassword">Current Password</Label>
                       <Input
                         id="currentPassword"
                         type="password"
@@ -233,7 +232,7 @@ const Profile = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="newPassword">Nouveau mot de passe</Label>
+                      <Label htmlFor="newPassword">New Password</Label>
                       <Input
                         id="newPassword"
                         type="password"
@@ -243,7 +242,7 @@ const Profile = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirmation</Label>
+                      <Label htmlFor="confirmPassword">Confirm Password</Label>
                       <Input
                         id="confirmPassword"
                         type="password"
@@ -259,7 +258,7 @@ const Profile = () => {
                       <p className="text-green-500 text-sm">{passwordSuccess}</p>
                     )}
                     <Button type="submit" className="mt-2 bg-blue-600 hover:bg-blue-700">
-                      Mettre à jour
+                      Update
                     </Button>
                   </form>
                 </CardContent>

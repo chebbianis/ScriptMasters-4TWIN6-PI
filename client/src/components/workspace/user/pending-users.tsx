@@ -11,22 +11,22 @@ import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// Mapper les rôles à des couleurs et icônes
+// Map roles to colors and icons
 const roleConfig = {
     ADMIN: {
         color: "bg-red-100 text-red-800 border-red-200",
         icon: <ShieldCheck className="w-3 h-3 mr-1" />,
-        label: "Administrateur"
+        label: "Administrator"
     },
     PROJECT_MANAGER: {
         color: "bg-blue-100 text-blue-800 border-blue-200",
         icon: <UserPlus className="w-3 h-3 mr-1" />,
-        label: "Chef de projet"
+        label: "Project Manager"
     },
     DEVELOPER: {
         color: "bg-purple-100 text-purple-800 border-purple-200",
         icon: <UserPlus className="w-3 h-3 mr-1" />,
-        label: "Développeur"
+        label: "Developer"
     }
 };
 
@@ -35,13 +35,13 @@ const PendingUsers = () => {
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
-    // Récupérer les utilisateurs en attente
+    // Get pending users
     const { data, isLoading, error } = useQuery({
         queryKey: ["pendingUsers"],
         queryFn: getPendingUsersQueryFn
     });
 
-    // Mutation pour approuver/rejeter un utilisateur
+    // Mutation to approve/reject a user
     const { mutate: activateUser, isPending: isActivating } = useMutation({
         mutationFn: activateUserMutationFn,
         onSuccess: (data) => {
@@ -49,34 +49,34 @@ const PendingUsers = () => {
             queryClient.invalidateQueries({ queryKey: ["userStats"] });
 
             toast({
-                title: data.success ? "Utilisateur approuvé" : "Demande rejetée",
+                title: data.success ? "User approved" : "Request rejected",
                 description: data.success
-                    ? `${data.data?.name} a maintenant accès à la plateforme.`
-                    : "La demande d'accès a été rejetée.",
+                    ? `${data.data?.name} now has access to the platform.`
+                    : "The access request has been rejected.",
                 variant: data.success ? "default" : "destructive",
             });
         },
         onError: () => {
             toast({
-                title: "Erreur",
-                description: "Impossible de traiter cette demande.",
+                title: "Error",
+                description: "Unable to process this request.",
                 variant: "destructive",
             });
         }
     });
 
-    // Gestionnaires d'événements
+    // Event handlers
     const handleApprove = (userId: string) => {
         activateUser({ userId, approved: true });
     };
 
     const handleReject = (userId: string) => {
-        if (window.confirm("Êtes-vous sûr de vouloir rejeter cette demande d'accès ?")) {
+        if (window.confirm("Are you sure you want to reject this access request?")) {
             activateUser({ userId, approved: false });
         }
     };
 
-    // Formatage de la date
+    // Date formatting
     const formatRequestDate = (dateString: string) => {
         const date = new Date(dateString);
         const now = new Date();
@@ -86,49 +86,49 @@ const PendingUsers = () => {
         const diffMinutes = Math.floor(diffMs / (1000 * 60));
 
         if (diffDays > 0) {
-            return `Il y a ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+            return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
         } else if (diffHours > 0) {
-            return `Il y a ${diffHours} heure${diffHours > 1 ? 's' : ''}`;
+            return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
         } else {
-            return `Il y a ${diffMinutes} minute${diffMinutes > 1 ? 's' : ''}`;
+            return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
         }
     };
 
-    // Filtrer les utilisateurs par rôle
+    // Filter users by role
     const filteredUsers = data?.data?.filter(user =>
         filter === "all" || user.requestedRole === filter
     ) || [];
 
-    // Afficher l'état de chargement
+    // Display loading state
     if (isLoading) {
         return (
             <Card className="border shadow-md overflow-hidden">
                 <CardHeader className="bg-gray-50 border-b pb-3">
-                    <CardTitle className="text-xl font-semibold text-gray-700">Demandes d'accès en attente</CardTitle>
+                    <CardTitle className="text-xl font-semibold text-gray-700">Pending Access Requests</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
                     <div className="flex justify-center items-center py-12">
                         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                        <span className="ml-3 text-gray-500">Chargement des demandes...</span>
+                        <span className="ml-3 text-gray-500">Loading requests...</span>
                     </div>
                 </CardContent>
             </Card>
         );
     }
 
-    // Afficher les erreurs
+    // Display errors
     if (error) {
         return (
             <Card className="border shadow-md overflow-hidden">
                 <CardHeader className="bg-red-50 border-b pb-3">
                     <CardTitle className="text-xl font-semibold text-gray-700 flex items-center">
                         <AlertTriangle className="text-red-500 mr-2 h-5 w-5" />
-                        Erreur
+                        Error
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
                     <div className="bg-red-50 text-red-800 p-4 rounded-md">
-                        Impossible de charger les demandes d'accès. Veuillez réessayer.
+                        Unable to load access requests. Please try again.
                     </div>
                 </CardContent>
             </Card>
@@ -141,23 +141,23 @@ const PendingUsers = () => {
                 <div className="flex justify-between items-center">
                     <div>
                         <CardTitle className="text-xl font-semibold text-gray-700">
-                            Demandes d'accès en attente
+                            Pending Access Requests
                         </CardTitle>
                         <CardDescription className="text-gray-500 mt-1">
-                            {data?.count || 0} utilisateur{data?.count !== 1 && 's'} en attente
+                            {data?.count || 0} pending user{data?.count !== 1 && 's'}
                         </CardDescription>
                     </div>
                     <div className="w-48">
                         <Select value={filter} onValueChange={setFilter}>
                             <SelectTrigger className="h-8">
                                 <Filter className="w-4 h-4 mr-2 text-gray-500" />
-                                <SelectValue placeholder="Filtrer par rôle" />
+                                <SelectValue placeholder="Filter by role" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">Tous les rôles</SelectItem>
-                                <SelectItem value="ADMIN">Administrateurs</SelectItem>
-                                <SelectItem value="PROJECT_MANAGER">Chefs de projet</SelectItem>
-                                <SelectItem value="DEVELOPER">Développeurs</SelectItem>
+                                <SelectItem value="all">All roles</SelectItem>
+                                <SelectItem value="ADMIN">Administrators</SelectItem>
+                                <SelectItem value="PROJECT_MANAGER">Project Managers</SelectItem>
+                                <SelectItem value="DEVELOPER">Developers</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -216,7 +216,7 @@ const PendingUsers = () => {
                                                         disabled={isActivating}
                                                     >
                                                         <Check className="h-4 w-4 mr-1" />
-                                                        Approuver
+                                                        Approve
                                                     </Button>
                                                     <Button
                                                         size="sm"
@@ -226,7 +226,7 @@ const PendingUsers = () => {
                                                         disabled={isActivating}
                                                     >
                                                         <X className="h-4 w-4 mr-1" />
-                                                        Rejeter
+                                                        Reject
                                                     </Button>
                                                 </div>
                                             </div>
@@ -242,9 +242,9 @@ const PendingUsers = () => {
                                 transition={{ duration: 0.3 }}
                             >
                                 <UserPlus className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                                <h3 className="text-gray-500 font-medium mb-1">Aucune demande en attente</h3>
+                                <h3 className="text-gray-500 font-medium mb-1">No pending requests</h3>
                                 <p className="text-gray-400 text-sm">
-                                    Les nouvelles demandes d'inscription apparaîtront ici
+                                    New registration requests will appear here
                                 </p>
                             </motion.div>
                         )}
@@ -255,12 +255,12 @@ const PendingUsers = () => {
             {filteredUsers.length > 0 && (
                 <CardFooter className="bg-gray-50 border-t py-3 flex justify-between items-center">
                     <span className="text-xs text-gray-500">
-                        Dernière demande reçue le {new Date(filteredUsers[0].requestedAt).toLocaleDateString('fr-FR')}
+                        Last request received on {new Date(filteredUsers[0].requestedAt).toLocaleDateString('en-US')}
                     </span>
                     {isActivating && (
                         <span className="text-xs flex items-center text-blue-600">
                             <Loader2 className="animate-spin h-3 w-3 mr-1" />
-                            Traitement en cours...
+                            Processing...
                         </span>
                     )}
                 </CardFooter>

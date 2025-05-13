@@ -149,7 +149,7 @@ export function WorkspaceSwitcher() {
                     <Plus className="size-4" />
                   </div>
                   <div className="font-medium text-muted-foreground">
-                    Ajouter un workspace
+                    Add Workspace
                   </div>
                 </DropdownMenuItem>
               )}

@@ -38,14 +38,14 @@ const MembersList = () => {
     });
 
     const handleRoleChange = (userId: string, newRole: string) => {
-        // Vérifier si l'utilisateur tente de changer son propre rôle (vérification côté client)
+        // Check if the user is trying to change their own role (client-side verification)
         const currentUserId = user?.id;
 
-        // Comparer explicitement les chaînes de caractères
+        // Compare strings explicitly
         if (String(userId) === String(currentUserId)) {
             toast({
-                title: "Action non autorisée",
-                description: "Vous ne pouvez pas modifier votre propre rôle",
+                title: "Action not allowed",
+                description: "You cannot modify your own role",
                 variant: "destructive",
             });
             return;
@@ -56,8 +56,8 @@ const MembersList = () => {
             {
                 onSuccess: () => {
                     toast({
-                        title: "Rôle mis à jour",
-                        description: "Le rôle du membre a été modifié avec succès",
+                        title: "Role updated",
+                        description: "The member's role has been successfully modified",
                     });
 
                     queryClient.invalidateQueries({
@@ -66,8 +66,8 @@ const MembersList = () => {
                 },
                 onError: (error: any) => {
                     toast({
-                        title: "Erreur",
-                        description: error.response?.data?.error || "Impossible de modifier le rôle",
+                        title: "Error",
+                        description: error.response?.data?.error || "Unable to modify the role",
                         variant: "destructive",
                     });
                 },
@@ -88,8 +88,8 @@ const MembersList = () => {
             {
                 onSuccess: () => {
                     toast({
-                        title: "Membre supprimé",
-                        description: "Le membre a été retiré du workspace avec succès",
+                        title: "Member removed",
+                        description: "The member has been successfully removed from the workspace",
                         variant: "success",
                     });
 
@@ -102,8 +102,8 @@ const MembersList = () => {
                 },
                 onError: (error: any) => {
                     toast({
-                        title: "Erreur",
-                        description: error.response?.data?.error || "Impossible de supprimer le membre",
+                        title: "Error",
+                        description: error.response?.data?.error || "Unable to remove the member",
                         variant: "destructive",
                     });
                 },
@@ -112,14 +112,14 @@ const MembersList = () => {
     };
 
     if (isLoading) {
-        return <div>Chargement des membres...</div>;
+        return <div>Loading members...</div>;
     }
 
     return (
         <>
             <div className="space-y-4">
                 {data?.members?.length === 0 ? (
-                    <p>Aucun membre dans ce workspace</p>
+                    <p>No members in this workspace</p>
                 ) : (
                     data?.members?.map((member: any) => (
                         <Card key={member.userId}>
@@ -143,12 +143,12 @@ const MembersList = () => {
                                         onValueChange={(value) => handleRoleChange(member.userId, value)}
                                     >
                                         <SelectTrigger className="w-[180px]">
-                                            <SelectValue placeholder="Sélectionner un rôle" />
+                                            <SelectValue placeholder="Select a role" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="ADMIN">Administrateur</SelectItem>
-                                            <SelectItem value="PROJECT_MANAGER">Chef de projet</SelectItem>
-                                            <SelectItem value="DEVELOPER">Développeur</SelectItem>
+                                            <SelectItem value="ADMIN">Administrator</SelectItem>
+                                            <SelectItem value="PROJECT_MANAGER">Project Manager</SelectItem>
+                                            <SelectItem value="DEVELOPER">Developer</SelectItem>
                                         </SelectContent>
                                     </Select>
 
@@ -174,10 +174,10 @@ const MembersList = () => {
                 isLoading={isRemoving}
                 onClose={() => setConfirmDialogOpen(false)}
                 onConfirm={handleRemoveMember}
-                title="Supprimer un membre"
-                description="Êtes-vous sûr de vouloir retirer ce membre du workspace ? Cette action est irréversible."
-                confirmText="Supprimer"
-                cancelText="Annuler"
+                title="Remove member"
+                description="Are you sure you want to remove this member from the workspace? This action is irreversible."
+                confirmText="Remove"
+                cancelText="Cancel"
             />
         </>
     );

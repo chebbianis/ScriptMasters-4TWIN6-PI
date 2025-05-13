@@ -22,17 +22,17 @@ export default function InviteCodeCard() {
             .then(() => {
                 setCopied(true);
                 toast({
-                    title: "Lien copié !",
-                    description: "Le lien d'invitation a été copié dans le presse-papier",
+                    title: "Link copied!",
+                    description: "The invitation link has been copied to clipboard",
                 });
 
-                // Réinitialiser l'état après 2 secondes
+                // Reset state after 2 seconds
                 setTimeout(() => setCopied(false), 2000);
             })
             .catch(() => {
                 toast({
-                    title: "Erreur",
-                    description: "Impossible de copier le lien",
+                    title: "Error",
+                    description: "Unable to copy link",
                     variant: "destructive",
                 });
             });
@@ -41,9 +41,9 @@ export default function InviteCodeCard() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Code d'invitation</CardTitle>
+                <CardTitle>Invitation Code</CardTitle>
                 <CardDescription>
-                    Partagez ce lien pour inviter des personnes à rejoindre votre workspace
+                    Share this link to invite people to join your workspace
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -69,4 +69,4 @@ export default function InviteCodeCard() {
             </CardContent>
         </Card>
     );
-} 
+}

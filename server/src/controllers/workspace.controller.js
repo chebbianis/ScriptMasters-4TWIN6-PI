@@ -767,3 +767,125 @@ export const removeMemberFromWorkspace = async (req, res) => {
         });
     }
 };
+
+// Fonction pour organiser une réunion et envoyer des invitations par email
+export const organizeMeeting = async (req, res) => {
+    try {
+        const { workspaceId } = req.params;
+        const { title, date, time, duration, description, timezone } = req.body;
+
+        // Validation des données
+        if (!title || !date || !time || !duration) {
+            return res.status(400).json({
+                success: false,
+                error: "Veuillez fournir toutes les informations requises (titre, date, heure, durée)"
+            });
+        }
+
+        // Créer un lien Google Meet
+        const meetingUrl = `https://meet.google.com/bkk-oeyz-zbv`;
+
+        // Formater la date et l'heure pour l'affichage
+        const formattedDate = new Date(`${date}T${time}:00`).toLocaleDateString('fr-FR', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        const formattedTime = new Date(`${date}T${time}:00`).toLocaleTimeString('fr-FR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        // Récupérer tous les membres du workspace
+        const workspaceMembers = await Workspace.findById(workspaceId).populate('members.userId');
+
+        if (!workspaceMembers.members.length) {
+            return res.status(404).json({
+                success: false,
+                error: "Aucun membre trouvé dans ce workspace"
+            });
+        }
+
+        // Récupérer le workspace pour le nom
+        const workspace = await Workspace.findById(workspaceId);
+        if (!workspace) {
+            return res.status(404).json({
+                success: false,
+                error: "Workspace non trouvé"
+            });
+        }
+
+        // Créer le contenu de l'email
+        const emailSubject = `Réunion : ${title} - Workspace ${workspace.name}`;
+        const emailHtml = `
+      <h2>Invitation à une réunion</h2>
+      <p><strong>Workspace:</strong> ${workspace.name}</p>
+      <p><strong>Titre:</strong> ${title}</p>
+      <p><strong>Date:</strong> ${formattedDate}</p>
+      <p><strong>Heure:</strong> ${formattedTime} (${timezone || 'UTC+1'})</p>
+      <p><strong>Durée:</strong> ${duration} minutes</p>
+      ${description ? `<p><strong>Description:</strong> ${description}</p>` : ''}
+      <p><strong>Lien Google Meet:</strong> <a href="${meetingUrl}">${meetingUrl}</a></p>
+      <p>Cliquez sur le lien ci-dessus pour rejoindre la réunion à l'heure indiquée.</p>
+    `;
+
+        // Envoyer un email à chaque membre
+        const emailPromises = workspaceMembers.members.map(async (member) => {
+            if (member.userId && member.userId.email) {
+                try {
+                    await transporter.sendMail({
+                        from: '"Team Sync" <teamsync@example.com>',
+                        to: member.userId.email,
+                        subject: emailSubject,
+                        html: emailHtml
+                    });
+                    return { email: member.userId.email, success: true };
+                } catch (error) {
+                    console.error(`Erreur d'envoi à ${member.userId.email}:`, error);
+                    return { email: member.userId.email, success: false, error: error.message };
+                }
+            }
+            return null;
+        });
+
+        const emailResults = await Promise.all(emailPromises.filter(Boolean));
+
+        // Enregistrer les détails de la réunion dans la base de données (optionnel)
+        const meeting = {
+            workspaceId,
+            title,
+            date,
+            time,
+            duration,
+            description,
+            meetingUrl,
+            createdAt: new Date(),
+            invitees: workspaceMembers.members.map(member => ({
+                userId: member.userId._id,
+                email: member.userId.email
+            }))
+        };
+
+        res.status(200).json({
+            success: true,
+            message: "Invitations à la réunion envoyées avec succès",
+            meeting: {
+                title,
+                date: formattedDate,
+                time: formattedTime,
+                duration,
+                description,
+                meetingUrl
+            },
+            emailResults
+        });
+    } catch (error) {
+        console.error("Erreur lors de l'organisation de la réunion:", error);
+        res.status(500).json({
+            success: false,
+            error: "Erreur lors de l'organisation de la réunion"
+        });
+    }
+};

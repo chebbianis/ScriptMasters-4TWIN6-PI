@@ -18,7 +18,10 @@ import useWorkspaceId from "@/hooks/use-workspace-id";
 import { getProjectNamesQueryFn } from "@/lib/api";
 import TaskAttachments from './task-attachments';
 import { useTaskPriorityPrediction } from "@/hooks/use-task-priority-prediction";
-import TaskPredictionInterface from './TaskPredictionInterface';
+import TaskPredictionHistory from "./TaskPredictionHistory";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Define the form schema type
 type FormValues = {
@@ -52,12 +55,14 @@ const formSchema = z.object({
 });
 
 interface CreateTaskFormProps {
-  workspaceId: string;
+  workspaceId?: string;
+  projectId?: string;
   initialData?: Partial<TaskType>;
   isEditMode?: boolean;
   taskId?: string;
   onSuccess?: (task: TaskType) => void;
   onClose?: () => void;
+  refreshTaskList?: () => void;
 }
 
 // Define project type
@@ -69,11 +74,13 @@ interface Project {
 
 export default function CreateTaskForm({
   workspaceId,
+  projectId,
   initialData,
   isEditMode = false,
   taskId,
   onSuccess,
   onClose,
+  refreshTaskList,
 }: CreateTaskFormProps) {
   const { user } = useAuthContext();
   const currentWorkspaceId = useWorkspaceId();
@@ -82,7 +89,7 @@ export default function CreateTaskForm({
   const [predictionConfidence, setPredictionConfidence] = useState<number | null>(null);
   const [predictionFailed, setPredictionFailed] = useState(false);
   const queryClient = useQueryClient();
-  const [manualPredictionLoading, setManualPredictionLoading] = useState(false);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -95,7 +102,7 @@ export default function CreateTaskForm({
           dueDate: initialData.dueDate
             ? new Date(initialData.dueDate).toISOString().split("T")[0]
             : "",
-          projectId: initialData.project?._id || "",
+          projectId: initialData.project?._id || projectId || "",
           assignedTo: initialData.assignedTo?._id || "",
         }
       : {
@@ -104,26 +111,33 @@ export default function CreateTaskForm({
           status: TaskStatusEnum.TODO,
           priority: TaskPriorityEnum.MEDIUM,
           dueDate: new Date().toISOString().split("T")[0],
-          projectId: "",
+          projectId: projectId || "",
           assignedTo: "",
         },
   });
+
+  useEffect(() => {
+    if (projectId && !form.getValues('projectId')) {
+      form.setValue('projectId', projectId);
+    }
+  }, [projectId, form]);
 
   const { mutate: predictPriority, isPending: isPredicting } = useTaskPriorityPrediction();
 
   // Watch form values for prediction
   const description = form.watch("description");
   const dueDate = form.watch("dueDate");
-  const projectId = form.watch("projectId");
+  const watchedProjectId = form.watch("projectId");
 
   // Automatically trigger AI prediction when relevant fields change
   useEffect(() => {
-    if (description && dueDate && projectId) {
+    if (description && dueDate && watchedProjectId) {
       const daysUntilDue = dueDate 
         ? Math.ceil((new Date(dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
         : 0;
       const features = {
         descriptionLength: description.length,
+        description: description,
         hasDueDate: !!dueDate,
         daysUntilDue,
         assignedToWorkload: 1,
@@ -152,7 +166,7 @@ export default function CreateTaskForm({
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [description, dueDate, projectId]);
+  }, [description, dueDate, watchedProjectId]);
 
   // Fetch tasks and extract unique projects
   const { data: projectsData, isLoading: isProjectsLoading } = useQuery({
@@ -200,8 +214,23 @@ export default function CreateTaskForm({
         title: isEditMode ? "Task updated" : "Task created",
         description: isEditMode ? "Your task has been updated successfully." : "Your task has been created successfully.",
       });
-      // Invalidate all queries so the table refreshes
-      queryClient.invalidateQueries();
+      
+      // Immediate refresh after task creation/update
+      if (refreshTaskList) {
+        // Call it immediately
+        setTimeout(() => {
+          refreshTaskList();
+        }, 0);
+        
+        // And then call it again after a short delay to ensure everything is updated
+        setTimeout(() => {
+          refreshTaskList();
+        }, 300);
+      } else {
+        // Fallback to traditional query invalidation if no direct refresh function
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      }
+      
       if (onSuccess) {
         onSuccess(data.task);
       }
@@ -220,22 +249,27 @@ export default function CreateTaskForm({
   });
 
   const onSubmit = (values: FormValues) => {
-    // Get the current priority from the form
-    const currentPriority = form.getValues('priority');
-    
-    // Ensure we're using the predicted priority if available
-    const submitValues = {
-      ...values,
-      priority: currentPriority || TaskPriorityEnum.MEDIUM
-    };
-
-    console.log('Submitting task with priority:', submitValues.priority);
+    // Always ensure a valid priority is set
+    let currentPriority = form.getValues('priority');
+    const validPriorities = Object.values(TaskPriorityEnum).map(String);
+    if (!currentPriority || !validPriorities.includes(String(currentPriority))) {
+      currentPriority = TaskPriorityEnum.MEDIUM;
+      form.setValue('priority', currentPriority);
+      toast({
+        title: 'Warning',
+        description: 'AI could not predict priority. Defaulting to MEDIUM.',
+        variant: 'destructive',
+      });
+    }
+    const submitValues = { ...values, priority: String(currentPriority) };
+    console.log('Submitting values:', submitValues);
     submitTask(submitValues);
   };
 
   return (
     <div className="w-full max-w-md mx-auto p-4">
       <h2 className="text-xl font-semibold mb-4">{isEditMode ? "Update Task" : "Create New Task"}</h2>
+      
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
@@ -318,39 +352,105 @@ export default function CreateTaskForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Priority</FormLabel>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-muted/50">
-                    {isPredicting || manualPredictionLoading ? (
-                      <>
-                        <Loader className="h-4 w-4 animate-spin" />
-                        <span>Analyzing task...</span>
-                      </>
-                    ) : showPrediction ? (
-                      <>
+                <div className="flex flex-col gap-2">
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.values(TaskPriorityEnum).map((priority) => (
+                        <SelectItem key={priority} value={priority}>
+                          {priority}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {showPrediction && (
+                    <div className="mt-2 p-3 border rounded-md bg-muted/20">
+                      <div className="flex items-center gap-2">
                         <Sparkles className="h-4 w-4" />
-                        <span className="font-medium">{field.value}</span>
-                        <span className="text-sm text-muted-foreground">
-                          (AI Suggested - {Math.round(predictionConfidence! * 100)}% confidence)
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground">Enter task details to get priority suggestion</span>
-                    )}
-                  </div>
+                        <span className="text-sm font-medium">AI Task Priority Prediction</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Our AI analyzes your task details to suggest the most appropriate priority level.
+                      </p>
+
+                      <div className="mt-3">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-medium">Predicted Priority</span>
+                          <span className="text-sm font-medium">Confidence</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant="outline" 
+                            className={`font-medium ${getPriorityColor(field.value)}`}
+                          >
+                            {field.value}
+                          </Badge>
+                          <span className="text-sm font-semibold ml-auto">{Math.round(predictionConfidence! * 100)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full" 
+                            style={{width: `${Math.round(predictionConfidence! * 100)}%`}}
+                          ></div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Features Used</p>
+                          <ul className="text-xs">
+                            <li>Description Length</li>
+                            <li>Days Until Due</li>
+                            <li>{Math.ceil((new Date(dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Project Context</p>
+                          <ul className="text-xs">
+                            <li>Due Date</li>
+                            <li>Set</li>
+                            <li>Project Progress</li>
+                            <li>50%</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-3 text-sm flex items-center justify-center gap-2 bg-muted/20 hover:bg-muted/40"
+                    onClick={() => setHistoryDialogOpen(true)}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    View Prediction History
+                  </Button>
+                  
+                  <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
+                    <DialogContent className="max-w-md max-h-[90vh]">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <Sparkles className="h-5 w-5" />
+                          AI Priority Prediction History
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="mt-4">
+                        <TaskPredictionHistory taskId={taskId} />
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
                 <FormMessage />
               </FormItem>
             )}
           />
-
-          {/* Add Task Prediction Interface */}
-          <TaskPredictionInterface
-            description={form.watch("description")}
-            dueDate={form.watch("dueDate")}
-            projectId={form.watch("projectId")}
-            assignedTo={form.watch("assignedTo")}
-          />
-
           <FormField
             control={form.control}
             name="dueDate"
@@ -377,7 +477,8 @@ export default function CreateTaskForm({
               </FormItem>
             )}
           />
-          <div className="flex justify-end space-x-2">
+          
+          <div className="flex justify-end space-x-2 pt-4">
             {onClose && (
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
@@ -406,4 +507,17 @@ export default function CreateTaskForm({
       )}
     </div>
   );
+}
+
+function getPriorityColor(priority: string) {
+  switch (priority.toUpperCase()) {
+    case 'HIGH':
+      return 'bg-red-100 text-red-800 border-red-400';
+    case 'MEDIUM':
+      return 'bg-blue-100 text-blue-800 border-blue-400';
+    case 'LOW':
+      return 'bg-green-100 text-green-800 border-green-400';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-400';
+  }
 }

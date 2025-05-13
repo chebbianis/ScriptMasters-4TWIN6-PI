@@ -9,12 +9,9 @@ const CreateProjectDialog = () => {
     <div>
       <Dialog modal={true} open={open} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-lg border-0">
-          {/* ✅ Ajout du titre obligatoire */}
-          <DialogTitle>Créer un nouveau projet</DialogTitle>
-
-          {/* ✅ Ajout d'une description (optionnel) */}
-          <DialogDescription>
-            Remplissez les informations ci-dessous pour créer un projet.
+          <DialogTitle className="sr-only">Créer un nouveau projet</DialogTitle>
+          <DialogDescription className="sr-only">
+            Formulaire pour créer un nouveau projet dans l'espace de travail
           </DialogDescription>
 
           <CreateProjectForm {...{ onClose }} />

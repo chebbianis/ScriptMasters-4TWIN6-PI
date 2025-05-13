@@ -7,12 +7,12 @@ const Schema = mongoose.Schema;
 const UserSchema = new Schema({
     name: {
         type: String,
-        required: [true, 'Le nom est obligatoire'],
+        required: [true, 'Name is required'],
         trim: true
     },
     email: {
         type: String,
-        required: [true, 'L\'email est obligatoire'],
+        required: [true, 'Email is required'],
         unique: true,
         lowercase: true,
         trim: true
@@ -23,6 +23,10 @@ const UserSchema = new Schema({
         select: false
     },
     profilePicture: {
+        type: String,
+        default: null
+    },
+    faceImagePath: {
         type: String,
         default: null
     },
@@ -49,10 +53,34 @@ const UserSchema = new Schema({
         enum: ['ADMIN', 'PROJECT_MANAGER', 'DEVELOPER'],
         default: 'DEVELOPER'
     },
+    // New fields for recommendation system
+    skills: [{
+        type: String,
+        default: []
+    }],
+    experience: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    performanceRating: {
+        type: Number,
+        default: 3.0,
+        min: 0,
+        max: 5
+    },
+    currentWorkload: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 40
+    },
     googleId: {
         type: String,
         sparse: true
-    }
+    },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date
 }, {
     timestamps: true
 });
@@ -76,7 +104,7 @@ UserSchema.methods.comparePassword = async function (candidatePassword) {
 };
 
 // Method to generate access token
-UserSchema.methods.generateAccessToken = function() {
+UserSchema.methods.generateAccessToken = function () {
     return jwt.sign(
         {
             id: this._id,
@@ -89,7 +117,7 @@ UserSchema.methods.generateAccessToken = function() {
 };
 
 // Method to generate refresh token
-UserSchema.methods.generateRefreshToken = function() {
+UserSchema.methods.generateRefreshToken = function () {
     return jwt.sign(
         { id: this._id },
         process.env.REFRESH_TOKEN_SECRET,

@@ -1,5 +1,5 @@
 import { clsx } from 'clsx';  // Add this import at the top
-import { FC, useState, useEffect } from "react";
+import { FC, useState, useEffect, forwardRef, useImperativeHandle, useCallback } from "react";
 import { getColumns } from "./table/columns";
 import { DataTable } from "./table/table";
 import { useParams } from "react-router-dom";
@@ -19,9 +19,12 @@ import CreateTaskForm from "./create-task-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"; // Updated imports for Dialog
 import Health from "./Health";
 import { BellOff } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import TaskQualityPredictor from './TaskQualityPredictor';
+import TaskQualityPredictor from "./TaskQualityPredictor";
 
+// Define interface for the ref methods
+export interface TaskTableRef {
+  refreshTasks: () => void;
+}
 
 const fetchTasks = async ({
   workspaceId,
@@ -35,10 +38,10 @@ const fetchTasks = async ({
 }: {
   workspaceId: string;
   projectId?: string;
-  keyword?: string | null;
-  status?: string | null;
-  priority?: string | null;
-  assignedTo?: string | null;
+  keyword?: string | undefined;
+  status?: string | undefined;
+  priority?: string | undefined;
+  assignedTo?: string | undefined;
   pageNumber: number;
   pageSize: number;
 }) => {
@@ -53,19 +56,34 @@ const fetchTasks = async ({
     pageSize: pageSize.toString(),
   });
 
-  const response = await fetch(`/api/task/all?${queryParams}`);
+  const response = await fetch(`http://localhost:3000/task/all?${queryParams}`);
   if (!response.ok) throw new Error("Failed to fetch tasks");
   return response.json();
 };
 
-const isDueTomorrow = (dueDate: string): boolean => {
+// Improved function for checking due dates
+const checkDueDate = (dueDate: string): { isDueSoon: boolean; isOverdue: boolean; daysLeft: number } => {
+  if (!dueDate) return { isDueSoon: false, isOverdue: false, daysLeft: 0 };
+  
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const due = new Date(dueDate);
   due.setHours(0, 0, 0, 0);
+  
   const diffTime = due.getTime() - today.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays === 1;
+  
+  return { 
+    isDueSoon: diffDays >= 0 && diffDays <= 1,  // Due today or tomorrow
+    isOverdue: diffDays < 0,                    // Past due date
+    daysLeft: diffDays 
+  };
+};
+
+// Legacy function kept for compatibility
+const isDueTomorrow = (dueDate: string): boolean => {
+  const { isDueSoon } = checkDueDate(dueDate);
+  return isDueSoon;
 };
 
 type Filters = ReturnType<typeof useTaskTableFilter>[0];
@@ -78,40 +96,81 @@ interface DataTableFilterToolbarProps {
   setFilters: SetFilters;
 }
 
-const TaskTable = () => {
+const TaskTable = forwardRef<TaskTableRef>((_, ref) => {
   const param = useParams();
   const projectId = param.projectId as string;
   const [tasksWithReminders, setTasksWithReminders] = useState<string[]>([]); 
+
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [tasks, setTasks] = useState<TaskType[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<TaskType | null>(null);
-  const [deletingTask, setDeletingTask] = useState<TaskType | null>(null);
+  const [deletingTask, setDeletingTask] = useState<TaskType | null>(null); // New state for delete confirmation
   const [showHealth, setShowHealth] = useState(false);
   const [showQualityPredictor, setShowQualityPredictor] = useState(false);
+  const [refreshCounter, setRefreshCounter] = useState(0); // Added for forcing refresh
+
   const [filters, setFilters] = useTaskTableFilter();
   const workspaceId = useWorkspaceId();
-  const queryClient = useQueryClient();
 
-  // Fetch tasks using React Query
-  const { data: tasksData, isLoading, error } = useQuery({
-    queryKey: ['tasks', workspaceId, projectId, filters, pageNumber, pageSize],
-    queryFn: () => fetchTasks({
-      workspaceId,
-      projectId: projectId || filters.projectId,
-      keyword: filters.keyword,
-      status: filters.status,
-      priority: filters.priority,
-      assignedTo: filters.assigneeId,
-      pageNumber,
-      pageSize,
-    }),
-    enabled: !!workspaceId,
-  });
+  // Use useCallback to memoize the loadTasks function
+  const loadTasks = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchTasks({
+        workspaceId,
+        projectId: projectId || filters.projectId || undefined,
+        keyword: filters.keyword || undefined,
+        status: filters.status || undefined,
+        priority: filters.priority || undefined,
+        assignedTo: filters.assigneeId || undefined,
+        pageNumber,
+        pageSize,
+      });
+      
+      // Process the tasks to add dueStatus property
+      const processedTasks = (data.tasks || []).map((task: TaskType) => {
+        const { isDueSoon, daysLeft } = checkDueDate(task.dueDate);
+        return {
+          ...task,
+          dueStatus: {
+            isDueSoon,
+            daysLeft
+          }
+        };
+      });
+      
+      setTasks(processedTasks);
+      setTotalCount(data.pagination?.totalCount || 0);
+    } catch (err) {
+      setError("Error loading tasks");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [
+    workspaceId,
+    projectId,
+    filters.keyword,
+    filters.status,
+    filters.priority,
+    filters.assigneeId,
+    filters.projectId,
+    pageNumber,
+    pageSize,
+  ]);
 
-  const tasks = tasksData?.tasks || [];
-  const totalCount = tasksData?.pagination?.totalCount || 0;
+  // Expose the refreshTasks function via ref
+  useImperativeHandle(ref, () => ({
+    refreshTasks: () => {
+      // Increment the counter to force a new state and trigger the effect
+      setRefreshCounter(prev => prev + 1);
+    }
+  }));
 
-  // Fetch reminder tasks
   useEffect(() => {
     const fetchReminderTasks = async () => {
       try {
@@ -125,49 +184,41 @@ const TaskTable = () => {
     };
   
     fetchReminderTasks();
-  }, []);
+  }, [refreshCounter]); // Add refreshCounter to trigger this effect
 
-  // Delete task mutation
-  const deleteTaskMutation = useMutation({
-    mutationFn: async (taskId: string) => {
+  useEffect(() => {
+    loadTasks();
+  }, [
+    loadTasks,
+    refreshCounter // Add refreshCounter to dependencies
+  ]);
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
       const response = await fetch(`http://localhost:3000/task/${taskId}`, {
         method: "DELETE",
       });
       if (!response.ok) throw new Error("Failed to delete task");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      setDeletingTask(null);
-    },
-    onError: (err) => {
+      // After successful deletion, refresh the entire task list
+      setRefreshCounter(prev => prev + 1);
+      setDeletingTask(null); // Close dialog after success
+    } catch (err) {
       console.error("Failed to delete task:", err);
+      setError("Failed to delete task");
     }
-  });
+  };
 
-  // Clear reminder mutation
-  const clearReminderMutation = useMutation({
-    mutationFn: async (taskId: string) => {
+  const handleClearReminder = async (taskId: string) => {
+    try {
       const response = await fetch(`http://localhost:3000/task/${taskId}/reminder`, {
         method: "DELETE",
       });
       if (!response.ok) throw new Error("Failed to clear reminder");
-      return response.json();
-    },
-    onSuccess: (_, taskId) => {
       setTasksWithReminders(prev => prev.filter(id => id !== taskId));
-    },
-    onError: (err) => {
+    } catch (err) {
       console.error("Failed to clear reminder:", err);
+      setError("Failed to clear reminder");
     }
-  });
-
-  const handleDeleteTask = (taskId: string) => {
-    deleteTaskMutation.mutate(taskId);
-  };
-
-  const handleClearReminder = (taskId: string) => {
-    clearReminderMutation.mutate(taskId);
   };
 
   const handlePageChange = (page: number) => setPageNumber(page);
@@ -177,24 +228,26 @@ const TaskTable = () => {
   };
 
   const handleUpdateSuccess = (updatedTask: TaskType) => {
-    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    // After successful update, refresh the entire task list
+    setRefreshCounter(prev => prev + 1);
     setEditingTask(null);
   };
 
   const columns = [
     ...getColumns(projectId).map(column => ({
       ...column,
+      // @ts-ignore - Ignoring the typing issue with the cell function for now
       cell: (props: any) => {
         const task = props.row.original;
-        const hasReminder = tasksWithReminders.includes(task._id); // Check if task ID is in reminders list
-        const isDueDateTomorrow = task.dueDate && isDueTomorrow(task.dueDate);
+        const hasReminder = tasksWithReminders.includes(task._id);
+        const dueInfo = checkDueDate(task.dueDate);
         
         return (
           <div className={clsx({
-            'bg-red-200 dark:bg-red-800/30': hasReminder, // Red for reminded tasks
-            'bg-orange-200 dark:bg-orange-800/30': !hasReminder && isDueDateTomorrow, // Orange for due tomorrow
+            'bg-red-200 dark:bg-red-800/30': hasReminder || dueInfo.isOverdue, 
+            'bg-orange-200 dark:bg-orange-800/30': !hasReminder && !dueInfo.isOverdue && dueInfo.isDueSoon, 
           })}>
-            {column.cell ? column.cell(props) : props.getValue()}
+            {typeof column.cell === 'function' ? column.cell(props) : props.getValue()}
           </div>
         );
       },
@@ -202,7 +255,7 @@ const TaskTable = () => {
     {
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => {
+      cell: ({ row }: { row: any }) => {
         const task = row.original;
         const hasReminder = tasksWithReminders.includes(task._id);
         
@@ -244,7 +297,7 @@ const TaskTable = () => {
 
   return (
     <div className="w-full relative">
-      {error && <div className="text-red-500 mb-4">{error.message}</div>}
+      {error && <div className="text-red-500 mb-4">{error}</div>}
 
       <DataTable
         isLoading={isLoading}
@@ -263,8 +316,8 @@ const TaskTable = () => {
         }
       />
 
-      <div className="mt-6 flex flex-col items-center">
-        <div className="flex flex-row gap-4">
+      <div className="mt-6 flex flex-col items-center space-y-4">
+        <div className="flex space-x-4">
           <Button
             variant="outline"
             className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md hover:from-blue-600 hover:to-indigo-700 transition-all duration-300"
@@ -274,10 +327,10 @@ const TaskTable = () => {
           </Button>
           <Button
             variant="outline"
-            className="bg-gradient-to-r from-green-500 to-teal-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md hover:from-green-600 hover:to-teal-700 transition-all duration-300"
+            className="bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md hover:from-purple-600 hover:to-pink-700 transition-all duration-300"
             onClick={() => setShowQualityPredictor(true)}
           >
-            Predict Task Quality
+            Predict Quality Task
           </Button>
         </div>
         {showHealth && (
@@ -285,18 +338,22 @@ const TaskTable = () => {
             <Health />
           </div>
         )}
-        {showQualityPredictor && (
-          <Dialog open onOpenChange={() => setShowQualityPredictor(false)}>
-            <DialogContent className="max-w-lg">
-              <DialogTitle>Task Quality Predictor</DialogTitle>
-              <DialogDescription>
-                Predict the quality of your task with confidence
-              </DialogDescription>
-              <TaskQualityPredictor />
-            </DialogContent>
-          </Dialog>
-        )}
       </div>
+
+      {/* Quality Predictor Modal */}
+      {showQualityPredictor && (
+        <Dialog open onOpenChange={() => setShowQualityPredictor(false)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Predict Task Quality</DialogTitle>
+              <DialogDescription>
+                Use AI to predict the quality of your task based on its details
+              </DialogDescription>
+            </DialogHeader>
+            <TaskQualityPredictor />
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Edit Task Modal */}
       {editingTask && (
@@ -309,6 +366,7 @@ const TaskTable = () => {
               taskId={editingTask._id}
               onSuccess={handleUpdateSuccess}
               onClose={() => setEditingTask(null)}
+              refreshTaskList={() => loadTasks()}
             />
           </DialogContent>
         </Dialog>
@@ -321,7 +379,7 @@ const TaskTable = () => {
             <DialogHeader>
               <DialogTitle>Confirm Deletion</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete the task "<strong>{deletingTask.title}</strong>"? This action cannot be undone.
+                Are you sure you want to delete the task "{deletingTask.title}"? This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -344,7 +402,7 @@ const TaskTable = () => {
       )}
     </div>
   );
-};
+});
 
 const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
   isLoading,
@@ -358,7 +416,7 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
   const projects = data?.projects || [];
   const members = memberData?.members || [];
 
-  const projectOptions = projects?.map((project) => ({
+  const projectOptions = projects?.map((project: any) => ({
     label: (
       <div className="flex items-center gap-1">
         <span>{project.emoji}</span>
@@ -368,7 +426,7 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
     value: project._id,
   }));
 
-  const assigneesOptions = members?.map((member) => {
+  const assigneesOptions = members?.map((member: any) => {
     const name = member.userId?.name || "Unknown";
     const initials = getAvatarFallbackText(name);
     const avatarColor = getAvatarColor(name);

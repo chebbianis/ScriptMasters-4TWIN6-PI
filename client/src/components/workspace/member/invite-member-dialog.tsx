@@ -7,9 +7,9 @@ interface InviteMemberDialogProps {
 }
 
 const InviteMemberDialog = ({ isOpen, onClose }: InviteMemberDialogProps) => {
-    // Empêcher la fermeture automatique lors de la sélection d'un email
+    // Prevent automatic closure when selecting an email
     const handleCloseDialog = (open: boolean) => {
-        // Ne fermer que si l'utilisateur clique explicitement pour fermer
+        // Only close if the user explicitly clicks to close
         if (!open) {
             onClose();
         }
@@ -19,7 +19,7 @@ const InviteMemberDialog = ({ isOpen, onClose }: InviteMemberDialogProps) => {
         <Dialog open={isOpen} onOpenChange={handleCloseDialog}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Inviter un membre</DialogTitle>
+                    <DialogTitle>Invite a member</DialogTitle>
                 </DialogHeader>
                 <div className="py-4">
                     <InviteMemberForm onComplete={onClose} />

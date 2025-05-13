@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Info, CircleAlert } from 'lucide-react';
+import { BellOff } from 'lucide-react';
 
 const defaultForm = {
   Category: '',
@@ -48,6 +48,7 @@ const TaskQualityPredictor: React.FC = () => {
     setLoading(true);
     setResult(null);
     setError(null);
+    console.log('Form data:', form);
 
     // Validate and fix decimal input
     const fixedForm = { ...form };
@@ -65,28 +66,45 @@ const TaskQualityPredictor: React.FC = () => {
       return;
     }
 
+    // Convert to appropriate types
+    const requestData = {
+      ...fixedForm,
+      EstimatedTime: Number(fixedForm.EstimatedTime),
+      ActualTime: Number(fixedForm.ActualTime),
+      CompletionPercentage: Number(fixedForm.CompletionPercentage),
+      TimeSpent: Number(fixedForm.TimeSpent),
+    };
+
+    console.log('Sending data to API:', requestData);
+
     try {
-      const response = await fetch('/api/predict', {
+      const response = await fetch('http://localhost:3000/api/predict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...fixedForm,
-          EstimatedTime: Number(fixedForm.EstimatedTime),
-          ActualTime: Number(fixedForm.ActualTime),
-          CompletionPercentage: Number(fixedForm.CompletionPercentage),
-          TimeSpent: Number(fixedForm.TimeSpent),
-        }),
+        body: JSON.stringify(requestData),
       });
+
+      console.log('Response status:', response.status);
       const text = await response.text();
+      console.log('Response text:', text);
+      
       let data;
       try {
         data = JSON.parse(text);
-      } catch {
+      } catch (e) {
+        console.error('Error parsing JSON:', e);
         throw new Error('Server returned invalid JSON.');
       }
-      if (data.error) throw new Error(data.error);
+      
+      if (data.error) {
+        console.error('Server returned error:', data.error);
+        throw new Error(data.error);
+      }
+      
+      console.log('Prediction result:', data);
       setResult({ prediction: data.prediction, confidence: data.confidence });
     } catch (err: any) {
+      console.error('Error in prediction:', err);
       setError(err.message || 'Prediction failed');
     } finally {
       setLoading(false);
@@ -183,7 +201,7 @@ const TaskQualityPredictor: React.FC = () => {
                 <DialogTitle>Prediction Explanation</DialogTitle>
                 <DialogDescription>
                   <div className="flex items-start gap-3 p-4 mb-3 rounded-lg bg-blue-50 border-l-4 border-blue-400 shadow-sm">
-                    <CircleAlert className="h-6 w-6 text-blue-500 mt-1" />
+                    <BellOff className="h-6 w-6 text-blue-500 mt-1" />
                     <div>
                       <span className="block text-lg font-semibold text-blue-900 mb-1">Explanation</span>
                       <span className="text-base font-medium text-blue-800">{getPredictionExplanation(form, result)}</span>

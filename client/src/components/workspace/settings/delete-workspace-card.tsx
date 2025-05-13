@@ -26,8 +26,8 @@ const DeleteWorkspaceCard = () => {
 
   const handleConfirm = () => {
     toast({
-      title: "Suppression en cours",
-      description: "Veuillez patienter pendant que nous supprimons le workspace...",
+      title: "Deletion in progress",
+      description: "Please wait while we delete the workspace...",
     });
 
     mutate(workspaceId, {
@@ -37,8 +37,8 @@ const DeleteWorkspaceCard = () => {
         });
 
         toast({
-          title: "Workspace supprimé",
-          description: "Le workspace a été supprimé avec succès",
+          title: "Workspace deleted",
+          description: "The workspace has been successfully deleted",
           variant: "success",
         });
 
@@ -47,15 +47,15 @@ const DeleteWorkspaceCard = () => {
           if (data.currentWorkspace) {
             navigate(`/workspace/${data.currentWorkspace}`);
           } else {
-            // Si aucun autre workspace n'est disponible
+            // If no other workspace is available
             navigate('/');
           }
         }, 100);
       },
       onError: (error) => {
         toast({
-          title: "Erreur de suppression",
-          description: error.message || "Impossible de supprimer le workspace",
+          title: "Deletion error",
+          description: error.message || "Unable to delete the workspace",
           variant: "destructive",
         });
       },
@@ -70,7 +70,7 @@ const DeleteWorkspaceCard = () => {
             className="text-[17px] tracking-[-0.16px] dark:text-[#fcfdffef] font-semibold mb-1.5
            text-center sm:text-left"
           >
-            Supprimer le Workspace
+            Delete Workspace
           </h1>
         </div>
 
@@ -81,10 +81,10 @@ const DeleteWorkspaceCard = () => {
           <div className="flex flex-col items-start justify-between py-0">
             <div className="flex-1 mb-2">
               <p className="text-muted-foreground">
-                La suppression d'un workspace est une action permanente et ne peut pas être annulée.
-                Une fois que vous supprimez un workspace, toutes les données associées, y compris
-                les projets, les tâches et les rôles des membres, seront définitivement supprimées.
-                Veuillez procéder avec prudence.
+                Deleting a workspace is a permanent action and cannot be undone.
+                Once you delete a workspace, all associated data, including
+                projects, tasks, and member roles, will be permanently deleted.
+                Please proceed with caution.
               </p>
             </div>
             <Button
@@ -94,7 +94,7 @@ const DeleteWorkspaceCard = () => {
               disabled={isPending}
             >
               {isPending && <Loader className="mr-2 h-4 w-4 animate-spin" />}
-              Supprimer le Workspace
+              Delete Workspace
             </Button>
           </div>
         </PermissionsGuard>
@@ -105,10 +105,10 @@ const DeleteWorkspaceCard = () => {
         isLoading={isPending}
         onClose={onCloseDialog}
         onConfirm={handleConfirm}
-        title={`Supprimer ${workspace?.name}`}
-        description={`Êtes-vous sûr de vouloir supprimer ce workspace ? Cette action ne peut pas être annulée et toutes les données seront perdues.`}
-        confirmText="Supprimer"
-        cancelText="Annuler"
+        title={`Delete ${workspace?.name}`}
+        description={`Are you sure you want to delete this workspace? This action cannot be undone and all data will be lost.`}
+        confirmText="Delete"
+        cancelText="Cancel"
       />
     </>
   );

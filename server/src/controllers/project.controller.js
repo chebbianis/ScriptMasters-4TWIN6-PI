@@ -5,12 +5,19 @@ import Task, { TaskStatus } from "../models/task.model.js";
 export const createProject = async (req, res) => {
   try {
     const { workspaceId } = req.params;
-    const { name, description, users, projectManager } = req.body;
+    const { name, description, users, projectManager, languages } = req.body;
 
     if (!projectManager) {
       return res
         .status(400)
         .json({ message: "Le chef de projet est obligatoire" });
+    }
+
+    // Vérifier que le champ languages est bien défini
+    if (!languages || !Array.isArray(languages) || languages.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "Au moins un langage de programmation est requis" });
     }
 
     const newProject = new Project({
@@ -19,7 +26,10 @@ export const createProject = async (req, res) => {
       description,
       users,
       projectManager,
+      languages,
     });
+
+    console.log("Création d'un projet avec les langages:", languages);
 
     await newProject.save();
 

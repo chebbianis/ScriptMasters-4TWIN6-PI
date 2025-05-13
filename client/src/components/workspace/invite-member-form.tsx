@@ -47,7 +47,7 @@ export default function InviteMemberForm({ onComplete }: InviteMemberFormProps =
         mutationFn: inviteMemberToWorkspaceMutationFn,
     });
 
-    // Rechercher des utilisateurs lorsque le terme de recherche change
+    // Search for users when the search term changes
     useEffect(() => {
         const fetchUsers = async () => {
             if (searchTerm.length < 2) {
@@ -60,10 +60,10 @@ export default function InviteMemberForm({ onComplete }: InviteMemberFormProps =
                 const response = await API.get(`/user/search/simple?keyword=${searchTerm}`);
                 setUsers(response.data.users || []);
             } catch (error) {
-                console.error("Erreur lors de la recherche d'utilisateurs:", error);
+                console.error("Error searching for users:", error);
                 toast({
-                    title: "Erreur",
-                    description: "Impossible de rechercher des utilisateurs",
+                    title: "Error",
+                    description: "Unable to search for users",
                     variant: "destructive",
                 });
             } finally {
@@ -82,10 +82,10 @@ export default function InviteMemberForm({ onComplete }: InviteMemberFormProps =
 
     const formSchema = z.object({
         email: z.string().trim().email({
-            message: "Format d'email invalide",
+            message: "Invalid email format",
         }),
         role: z.enum(["ADMIN", "PROJECT_MANAGER", "DEVELOPER"], {
-            required_error: "Veuillez sélectionner un rôle",
+            required_error: "Please select a role",
         }),
     });
 
@@ -109,29 +109,29 @@ export default function InviteMemberForm({ onComplete }: InviteMemberFormProps =
             {
                 onSuccess: (data) => {
                     toast({
-                        title: "Invitation envoyée",
-                        description: data.message || "L'invitation a été envoyée avec succès",
+                        title: "Invitation sent",
+                        description: data.message || "The invitation has been sent successfully",
                     });
 
-                    // Réinitialiser le formulaire
+                    // Reset the form
                     form.reset();
 
-                    // Fermer le popover de recherche
+                    // Close the search popover
                     setOpen(false);
                     setSearchTerm("");
 
-                    // Actualiser la liste des membres
+                    // Refresh the members list
                     queryClient.invalidateQueries({ queryKey: ["members", workspaceId] });
 
-                    // Fermer le dialog parent si onComplete est fourni
+                    // Close the parent dialog if onComplete is provided
                     if (onComplete) {
                         onComplete();
                     }
                 },
                 onError: (error: any) => {
                     toast({
-                        title: "Erreur",
-                        description: error.response?.data?.error || "Impossible d'envoyer l'invitation",
+                        title: "Error",
+                        description: error.response?.data?.error || "Unable to send the invitation",
                         variant: "destructive",
                     });
                 },
@@ -147,21 +147,21 @@ export default function InviteMemberForm({ onComplete }: InviteMemberFormProps =
     };
 
     const handleSelectUser = (email: string) => {
-        // Définir la valeur dans le formulaire
+        // Set the value in the form
         form.setValue("email", email, {
             shouldValidate: true,
             shouldDirty: true,
             shouldTouch: true
         });
 
-        // Mettre à jour le terme de recherche
+        // Update search term
         setSearchTerm(email);
 
-        // Fermer le popover
+        // Close the popover
         setOpen(false);
     };
 
-    // Ajouter un indicateur pour les utilisateurs qui sont déjà membres
+    // Add an indicator for users who are already members
     const usersWithMemberStatus = users.map((user: any) => ({
         ...user,
         isAlreadyMember: membersData?.members?.some(
@@ -172,9 +172,9 @@ export default function InviteMemberForm({ onComplete }: InviteMemberFormProps =
     return (
         <div className="space-y-4">
             <div className="space-y-2">
-                <h2 className="text-lg font-medium">Inviter un nouveau membre</h2>
+                <h2 className="text-lg font-medium">Invite a new member</h2>
                 <p className="text-sm text-muted-foreground">
-                    Invitez un utilisateur à rejoindre votre workspace
+                    Invite a user to join your workspace
                 </p>
             </div>
 
@@ -185,14 +185,14 @@ export default function InviteMemberForm({ onComplete }: InviteMemberFormProps =
                         name="email"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Email de l'utilisateur</FormLabel>
+                                <FormLabel>User email</FormLabel>
                                 <Popover open={open} onOpenChange={handleOpenChange}>
                                     <PopoverTrigger asChild>
                                         <FormControl>
                                             <div className="relative">
                                                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                                                 <Input
-                                                    placeholder="Entrez l'email de l'utilisateur..."
+                                                    placeholder="Enter user email..."
                                                     {...field}
                                                     value={field.value}
                                                     onChange={(e) => {
@@ -211,7 +211,7 @@ export default function InviteMemberForm({ onComplete }: InviteMemberFormProps =
                                     <PopoverContent className="p-0 w-[300px]" align="start" side="bottom">
                                         <Command>
                                             <CommandInput
-                                                placeholder="Rechercher des utilisateurs..."
+                                                placeholder="Search for users..."
                                                 value={searchTerm}
                                                 onValueChange={(value) => {
                                                     setSearchTerm(value);
@@ -221,13 +221,13 @@ export default function InviteMemberForm({ onComplete }: InviteMemberFormProps =
                                                 {isLoading ? (
                                                     <div className="p-4 text-center">
                                                         <Loader className="h-4 w-4 animate-spin mx-auto mb-2" />
-                                                        Recherche en cours...
+                                                        Searching...
                                                     </div>
                                                 ) : (
                                                     <>
-                                                        <CommandEmpty>Aucun utilisateur trouvé</CommandEmpty>
+                                                        <CommandEmpty>No users found</CommandEmpty>
                                                         {users.length > 0 && (
-                                                            <CommandGroup heading="Utilisateurs">
+                                                            <CommandGroup heading="Users">
                                                                 {usersWithMemberStatus.map((user: any) => (
                                                                     <CommandItem
                                                                         key={user._id}
@@ -255,7 +255,7 @@ export default function InviteMemberForm({ onComplete }: InviteMemberFormProps =
                                                 )}
                                                 {!isLoading && searchTerm.length < 2 && (
                                                     <div className="p-4 text-center text-muted-foreground text-sm">
-                                                        Entrez au moins 2 caractères pour rechercher
+                                                        Enter at least 2 characters to search
                                                     </div>
                                                 )}
                                             </CommandList>
@@ -272,20 +272,20 @@ export default function InviteMemberForm({ onComplete }: InviteMemberFormProps =
                         name="role"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Rôle</FormLabel>
+                                <FormLabel>Role</FormLabel>
                                 <Select
                                     onValueChange={field.onChange}
                                     defaultValue={field.value}
                                 >
                                     <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Sélectionnez un rôle" />
+                                            <SelectValue placeholder="Select a role" />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        <SelectItem value="ADMIN">Administrateur</SelectItem>
-                                        <SelectItem value="PROJECT_MANAGER">Chef de projet</SelectItem>
-                                        <SelectItem value="DEVELOPER">Développeur</SelectItem>
+                                        <SelectItem value="ADMIN">Administrator</SelectItem>
+                                        <SelectItem value="PROJECT_MANAGER">Project Manager</SelectItem>
+                                        <SelectItem value="DEVELOPER">Developer</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -301,10 +301,10 @@ export default function InviteMemberForm({ onComplete }: InviteMemberFormProps =
                         {isPending ? (
                             <>
                                 <Loader className="mr-2 h-4 w-4 animate-spin" />
-                                Invitation en cours...
+                                Sending invitation...
                             </>
                         ) : (
-                            "Inviter le membre"
+                            "Invite member"
                         )}
                     </Button>
                 </form>

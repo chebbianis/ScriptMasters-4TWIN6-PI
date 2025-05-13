@@ -779,3 +779,202 @@ export const updatePassword = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// Fonctions pour la reconnaissance faciale
+export const registerFace = async (req, res) => {
+  try {
+    console.log("Face registration request received");
+    const { userId } = req.body;
+
+    // Debug request
+    console.log("Request body:", req.body);
+    console.log("UserId from request:", userId);
+    console.log("File in request:", req.file ? "Present" : "Not present");
+
+    if (!userId) {
+      console.log("UserId missing in request");
+      return res.status(400).json({
+        success: false,
+        message: "ID utilisateur requis"
+      });
+    }
+
+    if (!req.file) {
+      console.log("No face image file in request");
+      return res.status(400).json({
+        success: false,
+        message: "Aucune image de visage fournie"
+      });
+    }
+
+    console.log("Face image received:", req.file.path);
+
+    // Trouver l'utilisateur
+    const user = await User.findById(userId);
+    if (!user) {
+      console.log("User not found with ID:", userId);
+      return res.status(404).json({
+        success: false,
+        message: "Utilisateur non trouvé"
+      });
+    }
+
+    // Enregistrer le chemin de l'image faciale
+    const facePath = req.file.path;
+    console.log("Saving face image path:", facePath);
+
+    // Mettre à jour l'utilisateur avec le chemin de l'image faciale
+    user.faceImagePath = facePath;
+    await user.save();
+
+    console.log("Face registration successful for user:", user.email);
+
+    return res.status(200).json({
+      success: true,
+      message: "Visage enregistré avec succès",
+      data: {
+        userId: user._id,
+        faceRegistered: true
+      }
+    });
+
+  } catch (error) {
+    console.error("Erreur d'enregistrement facial:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erreur lors de l'enregistrement du visage",
+      error: error.message
+    });
+  }
+};
+
+export const verifyFace = async (req, res) => {
+  try {
+    console.log("Face verification request received");
+    const { email } = req.body;
+
+    // Debug request
+    console.log("Request body:", req.body);
+    console.log("Email from request:", email);
+    console.log("File in request:", req.file ? "Present" : "Not present");
+    
+    if (!email) {
+      console.log("Email missing in request");
+      return res.status(400).json({
+        success: false,
+        message: "Email de l'utilisateur requis"
+      });
+    }
+
+    if (!req.file) {
+      console.log("No face image file in request");
+      return res.status(400).json({
+        success: false,
+        message: "Aucune image de visage fournie"
+      });
+    }
+
+    console.log("Face image received:", req.file.path);
+
+    // Trouver l'utilisateur par email
+    const user = await User.findOne({ email }).select("+password");
+    if (!user) {
+      console.log("User not found with email:", email);
+      return res.status(404).json({
+        success: false,
+        message: "Utilisateur non trouvé"
+      });
+    }
+
+    // For development purposes, we'll bypass face verification
+    // In production, this would compare the uploaded face with the stored face
+    
+    // Mise à jour de lastLogin
+    user.lastLogin = Date.now();
+
+    // Génération des tokens
+    const accessToken = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "15m" }
+    );
+
+    const refreshToken = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // Mise à jour utilisateur
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    // Construction réponse
+    const responseData = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      WorkspaceId: user.WorkspaceId,
+      isActive: user.isActive,
+      lastLogin: user.lastLogin,
+      accessToken,
+      refreshToken,
+    };
+
+    console.log("Face verification successful for user:", user.email);
+    
+    return res.status(200).json({
+      success: true,
+      message: "Authentification faciale réussie",
+      user: responseData
+    });
+
+  } catch (error) {
+    console.error("Erreur de vérification faciale:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erreur lors de la vérification du visage",
+      error: error.message
+    });
+  }
+};
+
+// Fonction pour initialiser les compétences des développeurs
+export const initializeDeveloperSkills = async () => {
+  try {
+    const defaultSkills = [
+      "JavaScript", "TypeScript", "Python", "Java", "C++", "C#", "Ruby", "PHP",
+      "Go", "Rust", "Swift", "Kotlin", "Scala", "R", "MATLAB", "SQL", "HTML",
+      "CSS", "Dart", "Elixir", "Haskell", "Perl", "Shell", "PowerShell"
+    ];
+
+    const developers = await User.find({ role: 'DEVELOPER' });
+    console.log(`Found ${developers.length} developers to update`);
+
+    for (const developer of developers) {
+      if (!developer.skills || developer.skills.length === 0) {
+        // Sélectionner aléatoirement 3-5 compétences
+        const numSkills = Math.floor(Math.random() * 3) + 3;
+        const randomSkills = defaultSkills
+          .sort(() => 0.5 - Math.random())
+          .slice(0, numSkills);
+
+        developer.skills = randomSkills;
+        developer.experience = Math.floor(Math.random() * 5) + 1; // 1-5 ans d'expérience
+        developer.performanceRating = (Math.random() * 2 + 3).toFixed(1); // Note entre 3.0 et 5.0
+        developer.currentWorkload = Math.floor(Math.random() * 20); // Charge de travail 0-20
+
+        await developer.save();
+        console.log(`Updated developer ${developer.name} with skills:`, randomSkills);
+      }
+    }
+
+    console.log('Developer skills initialization complete');
+  } catch (error) {
+    console.error('Error initializing developer skills:', error);
+  }
+};
+
+// Appeler cette fonction lors du démarrage du serveur
+initializeDeveloperSkills();

@@ -1,7 +1,14 @@
+import { useRef } from "react";
 import CreateTaskDialog from "@/components/workspace/task/create-task-dialog";
-import TaskTable from "@/components/workspace/task/task-table";
+import TaskTable, { TaskTableRef } from "@/components/workspace/task/task-table";
 
 export default function Tasks() {
+  const taskTableRef = useRef<TaskTableRef>(null);
+
+  const refreshTaskList = () => {
+    taskTableRef.current?.refreshTasks();
+  };
+
   return (
     <div className="w-full h-full flex-col space-y-8 pt-3">
       <div className="flex items-center justify-between space-y-2">
@@ -11,11 +18,11 @@ export default function Tasks() {
             Here&apos;s the list of tasks for this workspace!
           </p>
         </div>
-        <CreateTaskDialog />
+        <CreateTaskDialog refreshTaskList={refreshTaskList} />
       </div>
       {/* {Task Table} */}
       <div>
-        <TaskTable />
+        <TaskTable ref={taskTableRef} />
       </div>
     </div>
   );

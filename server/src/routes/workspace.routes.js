@@ -3,7 +3,7 @@ import {
     createWorkspace, getAllUserWorkspaces, getWorkspaceById,
     updateWorkspace, inviteMember, joinWorkspaceWithInviteCode,
     getAllWorkspaceMembers, updateMemberRole, deleteWorkspace,
-    removeMemberFromWorkspace
+    removeMemberFromWorkspace, organizeMeeting
 } from '../controllers/workspace.controller.js';
 
 const router = express.Router();
@@ -21,5 +21,8 @@ router.post('/join/:inviteCode', joinWorkspaceWithInviteCode);
 router.get('/members/:workspaceId', getAllWorkspaceMembers);
 router.patch('/:workspaceId/member/:userId/role', updateMemberRole);
 router.delete('/:workspaceId/member/:memberUserId', removeMemberFromWorkspace);
+
+// Route pour les réunions
+router.post('/:workspaceId/meeting', organizeMeeting);
 
 export default router; 

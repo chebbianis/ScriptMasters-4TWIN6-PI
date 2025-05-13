@@ -10,10 +10,13 @@ import PendingUsers from "@/components/workspace/user/pending-users";
 import UserStats from "@/components/workspace/user/user-stats";
 import UserSearch from "@/components/workspace/user/user-search";
 import { useAuthContext } from "@/context/auth-provider";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useChatbotStore } from "@/lib/store/chatbot-store";
 
 const WorkspaceDashboard = () => {
   const { onOpen } = useCreateProjectDialog();
   const { user } = useAuthContext();
+  const toggleChatbot = useChatbotStore(state => state.toggleChatbot);
   const isAdmin = user?.role === "ADMIN";
 
   return (
@@ -32,7 +35,36 @@ const WorkspaceDashboard = () => {
           New Project
         </Button>
       </div>
-      <WorkspaceAnalytics />
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>AI Virtual Assistant</CardTitle>
+          <CardDescription>
+            A chatbot powered by Google Gemini is now available to assist you
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-4 items-start">
+            <div className="flex-1">
+              <p className="mb-2">Our virtual assistant can help you with:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>Developer recommendations for your projects</li>
+                <li>Answers to questions about programming languages</li>
+                <li>Help with planning and task management</li>
+                <li>Suggestions to boost productivity</li>
+              </ul>
+            </div>
+            <div>
+              <Button onClick={toggleChatbot} className="whitespace-nowrap">
+                Open Assistant 💬
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+
+      {/* <WorkspaceAnalytics /> */}
       <div className="mt-4">
         <Tabs defaultValue="user-stats" className="w-full border rounded-lg p-2">
           <TabsList className="w-full justify-start border-0 bg-gray-50 px-1 h-12">
@@ -45,15 +77,12 @@ const WorkspaceDashboard = () => {
                   Pending Users
                 </TabsTrigger>
                 <TabsTrigger className="py-2" value="user-search">
-                  Recherche utilisateurs
+                  Search Users
                 </TabsTrigger>
               </>
             )}
             <TabsTrigger className="py-2" value="projects">
               Recent Projects
-            </TabsTrigger>
-            <TabsTrigger className="py-2" value="tasks">
-              Recent Tasks
             </TabsTrigger>
           </TabsList>
           {isAdmin && (

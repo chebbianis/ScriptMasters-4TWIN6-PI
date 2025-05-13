@@ -636,9 +636,7 @@ export const resetPasswordMutationFn = async ({
 };
 
 // Récupérer un projet par ID
-// Modify getProjectByIdQueryFn to return a function that resolves the data
 // Fonction pour récupérer les détails d'un projet
-// In getProjectByIdQueryFn
 export const getProjectByIdQueryFn = async ({
   projectId,
   workspaceId
@@ -646,29 +644,45 @@ export const getProjectByIdQueryFn = async ({
   projectId: string;
   workspaceId: string;
 }): Promise<ProjectResponseType> => {
-  const response = await API.get(
-    `/project/workspace/${workspaceId}/project/${projectId}`
-  );
-  return response.data;
+  console.log(`Fetching project with ID ${projectId} from workspace ${workspaceId}`);
+
+  try {
+    const response = await API.get(
+      `/project/workspace/${workspaceId}/project/${projectId}`
+    );
+    console.log("Project data received:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching project:", error);
+    throw error;
+  }
 };
 
 
 
 // Mettre à jour un projet
 export const updateProjectMutationFn = async ({
-  workspaceId, // Add workspaceId here
+  workspaceId,
   projectId,
   data,
 }: {
-  workspaceId: string; // Make sure to define it in the argument type
+  workspaceId: string;
   projectId: string;
   data: any;
 }): Promise<{ project: { _id: string; name: string; description: string } }> => {
-  const response = await axios.put(
-    `${API_URL}/project/${projectId}/`,
-    data
-  );
-  return response.data;
+  console.log(`Updating project with ID ${projectId}`, data);
+
+  try {
+    const response = await API.put(
+      `/project/${projectId}`,
+      data
+    );
+    console.log("Project update response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating project:", error);
+    throw error;
+  }
 };
 
 //export const getProjectByIdQueryFn = async ({
@@ -690,4 +704,33 @@ export const searchProjectsQueryFn = async (
   }
   const response = await API.get(url);
   return response.data;
+};
+
+// Fonction pour organiser une réunion et envoyer des invitations
+export const organizeMeetingMutationFn = async ({
+  workspaceId,
+  data
+}: {
+  workspaceId: string;
+  data: {
+    title: string;
+    date: string;
+    time: string;
+    duration: number;
+    description?: string;
+    timezone: string;
+  }
+}) => {
+  const response = await API.post(`/workspace/${workspaceId}/meeting`, data);
+  return response.data;
+};
+
+export const getDeveloperRecommendationsQueryFn = async (projectId: string) => {
+  try {
+    const response = await API.get(`/project/${projectId}/recommendations`);
+    return response.data;
+  } catch (error) {
+    console.error("Erreur lors de la récupération des recommandations:", error);
+    throw new Error("Erreur lors de la récupération des recommandations");
+  }
 };

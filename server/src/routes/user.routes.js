@@ -17,8 +17,40 @@ import {
   resetPassword,
   updatePassword,
   updateProfile,
+  registerFace,
+  verifyFace,
 } from "../controllers/user.controller.js";
 import { User } from "../models/user.model.js";
+import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '../../uploads/faces');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('Created faces upload directory:', uploadsDir);
+}
+
+// Configuration de multer pour le stockage des fichiers
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadsDir);
+  },
+  filename: function (req, file, cb) {
+    const timestamp = Date.now();
+    const ext = '.jpg';
+    const fileName = `face_${timestamp}${ext}`;
+    cb(null, fileName);
+  }
+});
+
+const upload = multer({ storage });
+
 const router = express.Router();
 
 // Routes utilisateur
@@ -48,5 +80,9 @@ router.post("/updateProfile", updateProfile);
 router.post("/forgot-password", forgotPassword);
 router.get("/reset-password/:token", verifyResetToken);
 router.post("/reset-password/:token", resetPassword);
+
+// Routes pour la reconnaissance faciale
+router.post("/register-face", upload.single('faceImage'), registerFace);
+router.post("/verify-face", upload.single('faceImage'), verifyFace);
 
 export default router;

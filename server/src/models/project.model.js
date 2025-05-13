@@ -15,7 +15,10 @@ const ProjectSchema = new Schema(
     description: {
       type: String,
     },
-
+    languages: [{
+      type: String,
+      required: [true, "Au moins un langage est requis"]
+    }],
     users: [
       {
         type: Schema.Types.ObjectId,

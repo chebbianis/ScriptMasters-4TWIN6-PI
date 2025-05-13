@@ -7,19 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Plus,
-  Search,
-  Users,
-  Shield,
-  Briefcase,
-  Code,
-  Mail,
-  Loader2,
-  UserCheck
-} from "lucide-react";
+import { Plus, Loader } from "lucide-react";
 import { useState } from "react";
 import InviteMemberDialog from "@/components/workspace/member/invite-member-dialog";
+import ScheduleMeetingDialog from "@/components/workspace/member/schedule-meeting-dialog";
 import { useAuthContext } from "@/context/auth-provider";
 import { Permissions } from "@/constant";
 import { Input } from "@/components/ui/input";
@@ -37,6 +28,7 @@ const Members = () => {
   const { data, isLoading } = useGetWorkspaceMembers(workspaceId);
   const { hasPermission } = useAuthContext();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isMeetingDialogOpen, setIsMeetingDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
 
@@ -57,30 +49,22 @@ const Members = () => {
   const getRoleLabel = (role: string) => {
     switch (role) {
       case "ADMIN":
-        return "Administrateur";
+        return "Administrator";
       case "PROJECT_MANAGER":
-        return "Chef de projet";
+        return "Project Manager";
       case "DEVELOPER":
-        return "Développeur";
+        return "Developer";
       default:
         return role;
     }
   };
 
   const getRoleIcon = (role: string) => {
-    switch (role) {
-      case "ADMIN":
-        return <Shield className="h-4 w-4 mr-1" />;
-      case "PROJECT_MANAGER":
-        return <Briefcase className="h-4 w-4 mr-1" />;
-      case "DEVELOPER":
-        return <Code className="h-4 w-4 mr-1" />;
-      default:
-        return null;
-    }
+    // Supprimé les icônes pour simplifier
+    return null;
   };
 
-  // Filtrer les membres en fonction de la recherche et du filtre de rôle
+  // Filter members based on search and role filter
   const filteredMembers = data?.members?.filter((member: any) => {
     const matchesSearch =
       member.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -91,7 +75,7 @@ const Members = () => {
     return matchesSearch && matchesRole;
   });
 
-  // Compter les membres par rôle
+  // Count members by role
   const memberStats = data?.members?.reduce((acc: any, member: any) => {
     if (!acc[member.role]) {
       acc[member.role] = 0;
@@ -104,12 +88,22 @@ const Members = () => {
     <div className="w-full h-auto py-2">
       <div className="flex items-center justify-between">
         <WorkspaceHeader />
-        {canInviteMembers && (
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Inviter un membre
+        <div className="flex gap-2">
+          {canInviteMembers && (
+            <Button onClick={() => setIsDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Invite member
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            onClick={() => setIsMeetingDialogOpen(true)}
+            className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
+          >
+            <span className="mr-2">📅</span>
+            Schedule meeting
           </Button>
-        )}
+        </div>
       </div>
       <Separator className="my-4" />
 
@@ -117,23 +111,22 @@ const Members = () => {
         <div className="container py-6 max-w-6xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
             <div>
-              <h2 className="text-2xl font-bold">Membres du workspace</h2>
+              <h2 className="text-2xl font-bold">Workspace members</h2>
               <p className="text-muted-foreground mt-1">
-                Gérez les membres qui ont accès à ce workspace
+                Manage members who have access to this workspace
               </p>
             </div>
 
             <div className="flex items-center space-x-2 mt-4 md:mt-0">
-              <Users className="h-5 w-5 text-muted-foreground" />
               <span className="text-lg font-medium">
-                {data?.members?.length || 0} membres
+                {data?.members?.length || 0} members
               </span>
             </div>
           </div>
 
           {isLoading ? (
             <div className="flex justify-center py-16">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <Loader className="h-12 w-12 animate-spin text-primary" />
             </div>
           ) : (
             <>
@@ -141,28 +134,25 @@ const Members = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <Card>
                   <CardContent className="flex items-center p-6">
-                    <Shield className="h-10 w-10 text-red-500 mr-4" />
                     <div>
                       <p className="text-lg font-medium">{memberStats?.ADMIN || 0}</p>
-                      <p className="text-muted-foreground">Administrateurs</p>
+                      <p className="text-muted-foreground">Administrators</p>
                     </div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="flex items-center p-6">
-                    <Briefcase className="h-10 w-10 text-blue-500 mr-4" />
                     <div>
                       <p className="text-lg font-medium">{memberStats?.PROJECT_MANAGER || 0}</p>
-                      <p className="text-muted-foreground">Chefs de projet</p>
+                      <p className="text-muted-foreground">Project Managers</p>
                     </div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="flex items-center p-6">
-                    <Code className="h-10 w-10 text-green-500 mr-4" />
                     <div>
                       <p className="text-lg font-medium">{memberStats?.DEVELOPER || 0}</p>
-                      <p className="text-muted-foreground">Développeurs</p>
+                      <p className="text-muted-foreground">Developers</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -171,31 +161,30 @@ const Members = () => {
               <Tabs defaultValue="all" className="mb-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0 mb-4">
                   <TabsList>
-                    <TabsTrigger value="all">Tous</TabsTrigger>
-                    <TabsTrigger value="admins">Administrateurs</TabsTrigger>
-                    <TabsTrigger value="managers">Chefs de projet</TabsTrigger>
-                    <TabsTrigger value="developers">Développeurs</TabsTrigger>
+                    <TabsTrigger value="all">All</TabsTrigger>
+                    <TabsTrigger value="admins">Administrators</TabsTrigger>
+                    <TabsTrigger value="managers">Project Managers</TabsTrigger>
+                    <TabsTrigger value="developers">Developers</TabsTrigger>
                   </TabsList>
 
                   <div className="flex w-full sm:w-auto space-x-2">
                     <div className="relative flex-1 sm:flex-initial">
-                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder="Rechercher un membre..."
-                        className="pl-9"
+                        placeholder="Search for a member..."
+                        className="pl-3"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
                     </div>
                     <Select value={roleFilter} onValueChange={setRoleFilter}>
                       <SelectTrigger className="w-[160px]">
-                        <SelectValue placeholder="Filtrer par rôle" />
+                        <SelectValue placeholder="Filter by role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Tous les rôles</SelectItem>
-                        <SelectItem value="ADMIN">Administrateurs</SelectItem>
-                        <SelectItem value="PROJECT_MANAGER">Chefs de projet</SelectItem>
-                        <SelectItem value="DEVELOPER">Développeurs</SelectItem>
+                        <SelectItem value="all">All roles</SelectItem>
+                        <SelectItem value="ADMIN">Administrators</SelectItem>
+                        <SelectItem value="PROJECT_MANAGER">Project Managers</SelectItem>
+                        <SelectItem value="DEVELOPER">Developers</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -228,11 +217,10 @@ const Members = () => {
 
               {filteredMembers?.length === 0 && (
                 <div className="text-center py-16 px-4 bg-muted/20 rounded-lg">
-                  <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Aucun membre trouvé</h3>
+                  <h3 className="text-lg font-medium mb-2">No members found</h3>
                   <p className="text-muted-foreground max-w-md mx-auto">
-                    Aucun membre ne correspond à vos critères de recherche.
-                    Essayez de modifier vos filtres ou d'inviter de nouveaux membres.
+                    No members match your search criteria.
+                    Try modifying your filters or invite new members.
                   </p>
                 </div>
               )}
@@ -245,12 +233,17 @@ const Members = () => {
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
       />
+
+      <ScheduleMeetingDialog
+        isOpen={isMeetingDialogOpen}
+        onClose={() => setIsMeetingDialogOpen(false)}
+      />
     </div>
   );
 
-  // Fonction pour rendre une carte de membre
+  // Function to render a member card
   function renderMemberCard(member: any) {
-    const user = member.user || { name: "Utilisateur inconnu" };
+    const user = member.user || { name: "Unknown User" };
     const avatarFallback = getAvatarFallbackText(user.name);
     const avatarColor = getAvatarColor(user.name);
 
@@ -268,20 +261,17 @@ const Members = () => {
               <div>
                 <h3 className="font-medium text-lg truncate">{user.name}</h3>
                 <div className="flex items-center text-sm text-muted-foreground">
-                  <Mail className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
                   <span className="truncate">{user.email}</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between">
                 <Badge variant={getRoleBadgeVariant(member.role)} className="flex items-center">
-                  {getRoleIcon(member.role)}
                   {getRoleLabel(member.role)}
                 </Badge>
 
                 <div className="flex items-center text-xs text-muted-foreground">
-                  <UserCheck className="h-3.5 w-3.5 mr-1" />
-                  <span>Ajouté il y a 3j</span>
+                  <span>Added 3 days ago</span>
                 </div>
               </div>
             </div>

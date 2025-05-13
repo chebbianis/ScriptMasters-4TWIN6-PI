@@ -8,7 +8,11 @@ import { getProjectByIdQueryFn } from "@/lib/api";
 import PermissionsGuard from "@/components/resuable/permission-guard";
 import { Permissions } from "@/constant";
 
-const ProjectHeader = () => {
+interface ProjectHeaderProps {
+  refreshTaskList?: () => void;
+}
+
+const ProjectHeader = ({ refreshTaskList }: ProjectHeaderProps) => {
   const param = useParams();
   const projectId = param.projectId as string;
 
@@ -52,7 +56,7 @@ const ProjectHeader = () => {
           <EditProjectDialog project={project} />
         </PermissionsGuard>
       </div>
-      <CreateTaskDialog projectId={projectId} />
+      <CreateTaskDialog projectId={projectId} refreshTaskList={refreshTaskList} />
     </div>
   );
 };

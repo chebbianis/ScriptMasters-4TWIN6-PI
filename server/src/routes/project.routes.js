@@ -10,6 +10,7 @@ import {
   getAllProjectManagers,
   searchProjects,
 } from "../controllers/project.controller.js";
+import { getDeveloperRecommendations } from "../controllers/recommendation.controller.js";
 
 const router = express.Router();
 
@@ -25,5 +26,8 @@ router.delete("/:projectId", deleteProject);
 router.get("/:projectId/analytics", getProjectAnalytics);
 router.get("/manager/", getAllProjectManagers);
 router.get("/search", searchProjects);
+
+// Route pour les recommandations de développeurs
+router.get("/:projectId/recommendations", getDeveloperRecommendations);
 
 export default router;

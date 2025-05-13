@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Search, Download, Users, Check, Trash2 } from "lucide-react";
+import { Search, Download, Users, Check, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateUserRoleMutationFn } from "@/lib/api";
 import { Loader2 } from "lucide-react";
@@ -19,8 +19,11 @@ const UserSearch = () => {
         query: '',
         role: 'all' as 'all' | 'ADMIN' | 'PROJECT_MANAGER' | 'DEVELOPER',
         status: 'all' as 'all' | 'active' | 'inactive',
-        limit: 10
+        limit: 20,
+        page: 1
     });
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalUsers, setTotalUsers] = useState(0);
     const [isExporting, setIsExporting] = useState(false);
     const [editingUser, setEditingUser] = useState<string | null>(null);
     const { toast } = useToast();
@@ -29,41 +32,52 @@ const UserSearch = () => {
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['searchUsers', searchParams],
         queryFn: async () => {
-            // Construire les paramètres de recherche
+            // Build search parameters
             const params = new URLSearchParams();
 
-            // Ajouter le mot-clé de recherche s'il existe
+            // Add search keyword if it exists
             if (searchParams.query) params.append('keyword', searchParams.query);
 
-            // Ajouter le rôle s'il est spécifié
+            // Add role if specified
             if (searchParams.role !== 'all') params.append('role', searchParams.role);
 
-            // Ajouter le statut s'il est spécifié
+            // Add status if specified
             if (searchParams.status !== 'all') params.append('status', searchParams.status);
 
-            // Ajouter la limite
+            // Add pagination parameters
             params.append('limit', searchParams.limit.toString());
+            params.append('page', searchParams.page.toString());
 
-            console.log("Paramètres de recherche:", Object.fromEntries(params.entries()));
+            console.log("Search parameters:", Object.fromEntries(params.entries()));
 
-            // Utiliser l'endpoint standard /user/search
+            // Use the standard /user/search endpoint
             const response = await API.get(`/user/search?${params.toString()}`);
 
-            // Ajouter un log pour voir la structure de données brute
-            console.log("Données brutes de l'API:", response.data);
+            // Add a log to see the raw data structure
+            console.log("Raw API data:", response.data);
 
-            // Transformer les données au format attendu par le composant
-            // en vérifiant plus explicitement la propriété role
+            // Mettre à jour le nombre total de pages et d'utilisateurs
+            if (response.data.total) {
+                setTotalUsers(response.data.total);
+                setTotalPages(Math.ceil(response.data.total / searchParams.limit));
+            } else {
+                // Si l'API ne renvoie pas le total, on estime à partir du nombre d'éléments
+                setTotalUsers(response.data.users?.length || 0);
+                setTotalPages(response.data.users?.length > 0 ? 1 : 0);
+            }
+
+            // Transform data to the format expected by the component
+            // explicitly checking the role property
             return {
                 success: response.data.success,
                 count: response.data.users?.length || 0,
                 data: (response.data.users || []).map((user: any) => {
-                    console.log("Utilisateur brut:", user);
+                    console.log("Raw user:", user);
                     return {
                         id: user._id || user.id,
                         name: user.name,
                         email: user.email,
-                        // S'assurer que la propriété role est bien définie
+                        // Ensure the role property is well defined
                         role: user.role || "",
                         isActive: user.isActive !== undefined ? user.isActive : true,
                         lastLogin: user.lastLogin || null
@@ -74,9 +88,9 @@ const UserSearch = () => {
         enabled: true
     });
 
-    console.log("Données reçues:", data);
+    console.log("Received data:", data);
 
-    // Mutation pour modifier le rôle
+    // Mutation to modify role
     const { mutate: updateRole, isPending: isUpdatingRole } = useMutation({
         mutationFn: updateUserRoleMutationFn,
         onSuccess: (data) => {
@@ -84,22 +98,22 @@ const UserSearch = () => {
             queryClient.invalidateQueries({ queryKey: ['userStats'] });
 
             toast({
-                title: "Rôle mis à jour",
-                description: `Le rôle de ${data.data?.name} a été modifié avec succès.`,
+                title: "Role updated",
+                description: `${data.data?.name}'s role has been successfully modified.`,
                 variant: "default",
             });
             setEditingUser(null);
         },
         onError: () => {
             toast({
-                title: "Erreur",
-                description: "Impossible de modifier le rôle de l'utilisateur.",
+                title: "Error",
+                description: "Unable to modify user's role.",
                 variant: "destructive",
             });
         }
     });
 
-    // Ajouter une nouvelle mutation pour la suppression
+    // Add a new mutation for deletion
     const { mutate: deleteUser, isPending: isDeleting } = useMutation({
         mutationFn: async (userId: string) => {
             const response = await API.delete(`/user/${userId}`);
@@ -109,21 +123,29 @@ const UserSearch = () => {
             queryClient.invalidateQueries({ queryKey: ['searchUsers'] });
             queryClient.invalidateQueries({ queryKey: ['userStats'] });
             toast({
-                title: "Utilisateur supprimé",
-                description: "L'utilisateur a été supprimé avec succès",
+                title: "User deleted",
+                description: "The user has been successfully deleted",
                 variant: "default",
             });
         },
         onError: () => {
             toast({
-                title: "Erreur",
-                description: "Impossible de supprimer l'utilisateur",
+                title: "Error",
+                description: "Unable to delete the user",
                 variant: "destructive",
             });
         }
     });
 
     const handleSearch = () => {
+        // Réinitialiser à la première page lors d'une nouvelle recherche
+        setSearchParams(prev => ({ ...prev, page: 1 }));
+        refetch();
+    };
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage < 1 || newPage > totalPages) return;
+        setSearchParams(prev => ({ ...prev, page: newPage }));
         refetch();
     };
 
@@ -131,7 +153,7 @@ const UserSearch = () => {
         try {
             setIsExporting(true);
 
-            // Appeler directement l'API pour obtenir les données
+            // Call API directly to get data
             const response = await API.get('/user/search', {
                 params: {
                     role: searchParams.role !== 'all' ? searchParams.role : undefined,
@@ -145,20 +167,20 @@ const UserSearch = () => {
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', 'utilisateurs.csv');
+            link.setAttribute('download', 'users.csv');
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
 
             toast({
-                title: "Exportation réussie",
-                description: "Le fichier d'exportation a été téléchargé",
+                title: "Export successful",
+                description: "The export file has been downloaded",
                 variant: "default",
             });
         } catch (error) {
             toast({
-                title: "Erreur d'exportation",
-                description: "Impossible d'exporter les utilisateurs",
+                title: "Export error",
+                description: "Unable to export users",
                 variant: "destructive",
             });
         } finally {
@@ -169,20 +191,20 @@ const UserSearch = () => {
     const handleRoleChange = (userId: string, newRole: 'ADMIN' | 'PROJECT_MANAGER' | 'DEVELOPER') => {
         if (!userId) {
             toast({
-                title: "Erreur",
-                description: "ID utilisateur non valide",
+                title: "Error",
+                description: "Invalid user ID",
                 variant: "destructive",
             });
             return;
         }
 
         updateRole({ userId, role: newRole });
-        console.log(`Modification du rôle pour l'utilisateur ${userId} : ${newRole}`);
+        console.log(`Modifying role for user ${userId}: ${newRole}`);
     };
 
     const formatDate = (dateString: string | null) => {
-        if (!dateString) return 'Jamais';
-        return new Date(dateString).toLocaleDateString('fr-FR', {
+        if (!dateString) return 'Never';
+        return new Date(dateString).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',
             day: 'numeric',
@@ -191,24 +213,23 @@ const UserSearch = () => {
         });
     };
 
-
     const users = data?.data || [];
 
     return (
         <Card className="shadow-lg">
             <CardHeader>
                 <div className="flex justify-between items-center">
-                    <CardTitle className="text-xl font-bold">Recherche d'utilisateurs</CardTitle>
+                    <CardTitle className="text-xl font-bold">User Search</CardTitle>
                     <Button variant="outline" onClick={handleExport} disabled={isExporting}>
                         {isExporting ? (
                             <>
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Exportation...
+                                Exporting...
                             </>
                         ) : (
                             <>
                                 <Download className="w-4 h-4 mr-2" />
-                                Exporter
+                                Export
                             </>
                         )}
                     </Button>
@@ -218,7 +239,7 @@ const UserSearch = () => {
                 <div className="flex flex-col md:flex-row gap-4 mb-6">
                     <div className="flex-1">
                         <Input
-                            placeholder="Rechercher par nom ou email"
+                            placeholder="Search by name or email"
                             value={searchParams.query}
                             onChange={(e) => setSearchParams({ ...searchParams, query: e.target.value })}
                             className="w-full"
@@ -233,13 +254,13 @@ const UserSearch = () => {
                             })}
                         >
                             <SelectTrigger>
-                                <SelectValue placeholder="Rôle" />
+                                <SelectValue placeholder="Role" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">Tous les rôles</SelectItem>
+                                <SelectItem value="all">All roles</SelectItem>
                                 <SelectItem value="ADMIN">Admin</SelectItem>
-                                <SelectItem value="PROJECT_MANAGER">Chef de projet</SelectItem>
-                                <SelectItem value="DEVELOPER">Développeur</SelectItem>
+                                <SelectItem value="PROJECT_MANAGER">Project Manager</SelectItem>
+                                <SelectItem value="DEVELOPER">Developer</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -252,18 +273,18 @@ const UserSearch = () => {
                             })}
                         >
                             <SelectTrigger>
-                                <SelectValue placeholder="Statut" />
+                                <SelectValue placeholder="Status" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">Tous</SelectItem>
-                                <SelectItem value="active">Actifs</SelectItem>
-                                <SelectItem value="inactive">Inactifs</SelectItem>
+                                <SelectItem value="all">All</SelectItem>
+                                <SelectItem value="active">Active</SelectItem>
+                                <SelectItem value="inactive">Inactive</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
                     <Button onClick={handleSearch}>
                         <Search className="w-4 h-4 mr-2" />
-                        Rechercher
+                        Search
                     </Button>
                 </div>
 
@@ -272,124 +293,177 @@ const UserSearch = () => {
                         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                     </div>
                 ) : users.length > 0 ? (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Utilisateur</TableHead>
-                                <TableHead>Rôle</TableHead>
-                                <TableHead>Statut</TableHead>
-                                <TableHead className="text-right">Dernière connexion</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {users.map((user: any) => (
-                                <TableRow key={user.id || user._id}>
-                                    <TableCell>
-                                        <div className="flex items-center space-x-3">
-                                            <Avatar>
-                                                <AvatarFallback>{user.name[0]}</AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <div className="font-medium">{user.name}</div>
-                                                <div className="text-sm text-muted-foreground">{user.email}</div>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        {editingUser === (user.id || user._id) ? (
-                                            <div className="flex items-center gap-2">
-                                                <Select
-                                                    defaultValue={user.role}
-                                                    onValueChange={(value) => handleRoleChange(
-                                                        user.id,
-                                                        value as 'ADMIN' | 'PROJECT_MANAGER' | 'DEVELOPER'
-                                                    )}
-                                                    disabled={isUpdatingRole}
-                                                >
-                                                    <SelectTrigger className="w-[140px] h-8">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="ADMIN">Administrateur</SelectItem>
-                                                        <SelectItem value="PROJECT_MANAGER">Chef de projet</SelectItem>
-                                                        <SelectItem value="DEVELOPER">Développeur</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => setEditingUser(null)}
-                                                    className="h-8 w-8"
-                                                >
-                                                    <Check className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        ) : (
-                                            <Badge
-                                                variant={
-                                                    user.role === "ADMIN" ? "destructive" :
-                                                        user.role === "PROJECT_MANAGER" ? "default" :
-                                                            "outline"
-                                                }
-                                                className="cursor-pointer hover:opacity-90"
-                                                onClick={() => setEditingUser(user.id || user._id)}
-                                            >
-                                                {user.role === "ADMIN" ? "Administrateur" :
-                                                    user.role === "PROJECT_MANAGER" ? "Chef de projet" :
-                                                        user.role === "DEVELOPER" ? "Développeur" :
-                                                            "Non défini"}
-                                            </Badge>
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={user.isActive === true ? "default" : "secondary"}>
-                                            {user.isActive === true ? "Actif" : "Inactif"}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {formatDate(user.lastLogin)}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Êtes-vous sûr?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        Cette action est irréversible. Cela supprimera définitivement l'utilisateur
-                                                        <span className="font-semibold"> {user.name}</span> et toutes ses données associées.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                                    <AlertDialogAction
-                                                        onClick={() => deleteUser(user.id || user._id)}
-                                                        className="bg-red-500 hover:bg-red-600"
-                                                    >
-                                                        {isDeleting ? "Suppression..." : "Supprimer"}
-                                                    </AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </TableCell>
+                    <>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>User</TableHead>
+                                    <TableHead>Role</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Last Login</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {users.map((user: any) => (
+                                    <TableRow key={user.id || user._id}>
+                                        <TableCell>
+                                            <div className="flex items-center space-x-3">
+                                                <Avatar>
+                                                    <AvatarFallback>{user.name[0]}</AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <div className="font-medium">{user.name}</div>
+                                                    <div className="text-sm text-muted-foreground">{user.email}</div>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            {editingUser === (user.id || user._id) ? (
+                                                <div className="flex items-center gap-2">
+                                                    <Select
+                                                        defaultValue={user.role}
+                                                        onValueChange={(value) => handleRoleChange(
+                                                            user.id,
+                                                            value as 'ADMIN' | 'PROJECT_MANAGER' | 'DEVELOPER'
+                                                        )}
+                                                        disabled={isUpdatingRole}
+                                                    >
+                                                        <SelectTrigger className="w-[140px] h-8">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="ADMIN">Administrator</SelectItem>
+                                                            <SelectItem value="PROJECT_MANAGER">Project Manager</SelectItem>
+                                                            <SelectItem value="DEVELOPER">Developer</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => setEditingUser(null)}
+                                                        className="h-8 w-8"
+                                                    >
+                                                        <Check className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <Badge
+                                                    variant={
+                                                        user.role === "ADMIN" ? "destructive" :
+                                                            user.role === "PROJECT_MANAGER" ? "default" :
+                                                                "outline"
+                                                    }
+                                                    className="cursor-pointer hover:opacity-90"
+                                                    onClick={() => setEditingUser(user.id || user._id)}
+                                                >
+                                                    {user.role === "ADMIN" ? "Administrator" :
+                                                        user.role === "PROJECT_MANAGER" ? "Project Manager" :
+                                                            user.role === "DEVELOPER" ? "Developer" :
+                                                                "Not defined"}
+                                                </Badge>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant={user.isActive === true ? "default" : "secondary"}>
+                                                {user.isActive === true ? "Active" : "Inactive"}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {formatDate(user.lastLogin)}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This action is irreversible. It will permanently delete the user
+                                                            <span className="font-semibold"> {user.name}</span> and all associated data.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction
+                                                            onClick={() => deleteUser(user.id || user._id)}
+                                                            className="bg-red-500 hover:bg-red-600"
+                                                        >
+                                                            {isDeleting ? "Deleting..." : "Delete"}
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+
+                        {/* Pagination controls */}
+                        <div className="flex items-center justify-between space-x-2 py-4">
+                            <div className="text-sm text-muted-foreground">
+                                Affichage de <span className="font-medium">{users.length}</span> utilisateurs
+                                {totalUsers > 0 && (
+                                    <> sur <span className="font-medium">{totalUsers}</span></>
+                                )}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handlePageChange(searchParams.page - 1)}
+                                    disabled={searchParams.page <= 1 || isLoading}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                    <span className="sr-only">Page précédente</span>
+                                </Button>
+                                <div className="text-sm font-medium">
+                                    Page {searchParams.page} sur {totalPages || 1}
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handlePageChange(searchParams.page + 1)}
+                                    disabled={searchParams.page >= totalPages || isLoading}
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                    <span className="sr-only">Page suivante</span>
+                                </Button>
+                                <Select
+                                    value={searchParams.limit.toString()}
+                                    onValueChange={(value) => {
+                                        const newLimit = parseInt(value);
+                                        setSearchParams({ ...searchParams, limit: newLimit, page: 1 });
+                                        refetch();
+                                    }}
+                                >
+                                    <SelectTrigger className="w-[80px] h-8">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="5">5</SelectItem>
+                                        <SelectItem value="10">10</SelectItem>
+                                        <SelectItem value="20">20</SelectItem>
+                                        <SelectItem value="50">50</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    </>
                 ) : (
                     <div className="text-center py-10 text-gray-500">
                         <Users className="w-10 h-10 mx-auto mb-2 text-gray-400" />
-                        <p>Aucun utilisateur trouvé</p>
-                        <p className="text-sm">Essayez d'autres critères de recherche</p>
+                        <p>No users found</p>
+                        <p className="text-sm">Try different search criteria</p>
                     </div>
                 )}
             </CardContent>
