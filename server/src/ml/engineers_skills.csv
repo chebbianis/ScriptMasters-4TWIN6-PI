@@ -1,0 +1,51 @@
+Engineer,Skills,Years Experience,Current Workload,Performance Rating
+Mohamed Mbarek,"prometheus, node.js, figma, go, laravel, asp.net, cassandra, database, mysql",2,6,4.4
+Ali Ben Ali,"redis, mysql, firebase, pandas, elasticsearch, oracle, sqlite",11,8,4.1
+Soumaya Ben Ali,"kubernetes, jenkins, rust, postgresql, python, figma, node.js, ruby, angular, redis, terraform",3,9,4.2
+Mouna Ammar,"node.js, firebase, redis, pandas, c, jira, react",7,5,4.2
+Marwa Zarrouk,"jenkins, sql, pytorch, api, react",13,9,4.0
+Fathi Abid,"tensorflow, sqlite, jwt, flask, database, node.js, java, laravel, selenium",12,5,4.8
+Nadia Ben Ali,"firebase, php, jwt, typescript, mysql, terraform, database, redis",13,7,4.2
+Aicha Mbarek,"jira, python, jest, react, go, keras, aws",1,5,4.2
+Khalil Chaabane,"heroku, google cloud, elasticsearch, go, laravel, node.js, python, pytorch, typescript, vue, react",7,2,4.0
+Leila Jlassi,"scala, typescript, jest, vue, kubernetes",2,1,3.3
+Aicha Hamdi,"kubernetes, flask, mysql, api, pytorch, google cloud, oracle, redis, terraform, asp.net",9,3,4.5
+Fathi Ben Ali,"rust, keras, scala, python, laravel, flask, php, vue, oracle, spring boot, tensorflow",1,9,3.4
+Tarek Abid,"figma, keras, api, java, postgresql, firebase, go, scala",13,3,3.9
+Youssef Daoud,"flask, elasticsearch, laravel, selenium, pandas, sqlite, rust, php, kubernetes, kotlin, pytorch",9,2,4.6
+Soumaya Ammar,"rust, selenium, typescript, google cloud, java",14,1,4.6
+Bassem Saïdi,"oracle, cassandra, docker, ruby, tensorflow, kubernetes, heroku",14,7,3.3
+Mouna Zarrouk,"react, mysql, sqlite, aws, keras, spring boot, oracle",13,0,4.8
+Samira Daoud,"jira, spring boot, kotlin, python, go, php, tensorflow",14,9,2.9
+Riadh Hamdi,"aws, laravel, rust, cassandra, flask, ruby, jira, git",3,4,4.0
+Mouna Ben Ali,"ansible, postgresql, mongodb, cassandra, keras, prometheus, go",13,2,4.0
+Khalil Gharbi,"go, sqlite, google cloud, redis, jenkins, heroku, jwt, mysql, database, java",9,8,2.9
+Amira Saïdi,"jenkins, jwt, react, git, node.js, google cloud, figma, redis, cassandra, sql",2,6,3.8
+Leila Ben Ali,"selenium, api, react, rust, jwt, database, graphql",13,6,3.3
+Mouna Bouaziz,"google cloud, spring boot, node.js, selenium, terraform",6,4,4.6
+Khalil Bouaziz,"tensorflow, mongodb, go, mysql, aws",7,2,4.1
+Bassem Gharbi,"graphql, mysql, sqlite, spring boot, kotlin, scala, jest, typescript, c",11,3,4.4
+Aicha Bouaziz,"django, redis, postgresql, asp.net, jira, pytorch, react, spring boot, terraform, pandas",9,4,3.1
+Mouna Haddad,"spring boot, firebase, angular, ansible, database",14,8,3.8
+Nadia Bouzayen,"jenkins, oracle, azure, asp.net, go, php, elasticsearch",2,5,2.5
+Ahmed Masmoudi,"jest, typescript, keras, git, mysql, redis",3,0,3.2
+Fatma Jlassi,"api, jenkins, kubernetes, mongodb, asp.net",10,0,4.9
+Samira Fersi,"pytorch, selenium, jwt, mysql, sqlite, git, heroku",1,7,3.4
+Nour Trabelsi,"c, git, flask, ansible, azure",14,7,4.9
+Ahmed Zarrouk,"elasticsearch, mysql, pandas, prometheus, c++, typescript, postgresql, react, flask, sqlite",13,1,3.3
+Fatma Saïdi,"redis, keras, oracle, jira, laravel, c++, typescript, azure",11,8,4.2
+Rym Mlika,"firebase, azure, python, redis, api, spring boot, java, jwt, graphql, asp.net, angular",13,8,2.6
+Youssef Haddad,"flask, mysql, oracle, spring boot, jest, node.js, terraform, selenium, django, vue",3,3,4.7
+Marwa Fersi,"azure, api, angular, laravel, database, selenium",5,6,4.1
+Houda Abid,"kotlin, redis, database, ruby, typescript, selenium",10,7,3.4
+Sana Bouzayen,"ansible, react, firebase, java, redis, aws, mysql",4,8,4.2
+Ahmed Fersi,"google cloud, elasticsearch, go, pytorch, git, scala, ansible, typescript",9,5,3.3
+Ali Mlika,"python, kubernetes, laravel, keras, node.js, google cloud, git, spring boot, typescript",9,5,4.1
+Salma Ben Ali,"c++, ruby, jest, azure, cassandra, java, jwt, pytorch",7,7,3.3
+Ali Jlassi,"c, firebase, c++, jest, typescript",9,6,3.6
+Salma Chaabane,"scala, typescript, php, docker, django",12,7,4.8
+Aicha Chaabane,"graphql, pytorch, oracle, mongodb, jwt, aws",1,3,4.2
+Nour Fersi,"sql, pandas, jest, c, django, pytorch, jenkins, php",1,5,3.0
+Nour Abid,"ansible, postgresql, mysql, angular, google cloud",4,8,4.2
+Omar Jlassi,"google cloud, vue, jira, spring boot, firebase, jenkins, php",9,1,4.0
+Khalil Bouaziz,"postgresql, php, kotlin, figma, go, rust, git, scala, firebase, jest",6,7,4.6
