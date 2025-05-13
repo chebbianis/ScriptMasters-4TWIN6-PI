@@ -2,54 +2,56 @@ from flask import Flask, jsonify
 from pymongo import MongoClient
 import joblib
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
 
-# Load trained model
-model = joblib.load('random_forest_model.pkl')
+# Load trained multi-label model and vectorizer
+model = joblib.load('multi_label_model.pkl')
+vectorizer = joblib.load('tfidf_vectorizer.pkl')
 
 # Initialize Flask app
 app = Flask(__name__)
 app.url_map.strict_slashes = False  # Treat /predict and /predict/ the same
 
 # Connect to MongoDB
-client = MongoClient("mongodb://localhost:27017/")  # Adjust if you use auth or different host
-db = client['ScriptMasters']  # Replace with your actual DB name
+client = MongoClient("mongodb://localhost:27017/")
+db = client['ScriptMasters']
 projects_collection = db['projects']
 
-# GET route to make prediction from MongoDB data
+# GET route to make predictions
 @app.route('/predict', methods=['GET'])
 def predict_from_db():
     try:
-        # Fetch all projects
-        projects_cursor = projects_collection.find()
-        projects = list(projects_cursor)
-
+        # Fetch projects from MongoDB
+        projects = list(projects_collection.find())
         if not projects:
             return jsonify({'error': 'No projects found'}), 400
 
-        # Extract text features (adjust fields as needed)
+        # Construct text features
         text_data = [
             f"{proj.get('description', '')} {proj.get('documentationLink', '')} {proj.get('emoji', '')}"
             for proj in projects
         ]
 
-        # Vectorize with TF-IDF (must match the model training setup)
-        vectorizer = TfidfVectorizer(max_features=500)
-        X = vectorizer.fit_transform(text_data)
+        # Vectorize using the pre-trained vectorizer
+        X = vectorizer.transform(text_data)
 
-        # Predict
+        # Predict using the multi-label model
         predictions = model.predict(X)
 
-        # Combine prediction with project info
-        result = []
-        for proj, pred in zip(projects, predictions):
-            result.append({
-                'projectId': str(proj.get('_id')),
-                'projectName': proj.get('name'),
-                'prediction': int(pred)  # 0 or 1
-            })
+        # Output column names (must match training labels)
+        label_names = ['engagement_level', 'has_documentation', 'likely_success']
 
-        return jsonify({'predictions': result})
+        # Prepare response
+        results = []
+        for proj, pred in zip(projects, predictions):
+            result = {
+                'projectId': str(proj.get('_id')),
+                'projectName': proj.get('name')
+            }
+            for i, label in enumerate(label_names):
+                result[label] = int(pred[i])
+            results.append(result)
+
+        return jsonify({'predictions': results})
 
     except Exception as e:
         print("Error:", e)
