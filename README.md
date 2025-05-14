@@ -1,4 +1,4 @@
-# HScriptMasters - Plateforme de Gestion de Projets
+# ScriptMasters - Plateforme de Gestion de Projets
 
 ## Description
 
